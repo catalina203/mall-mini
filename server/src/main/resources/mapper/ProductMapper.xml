@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.mallmini.product.mapper.ProductMapper">
+
+    <select id="selectOnSalePage" resultType="com.mallmini.product.entity.Product">
+        SELECT p.*
+        FROM product p
+        JOIN category c ON c.id = p.category_id AND c.status = 'ENABLED'
+        WHERE p.status = 'ON_SALE'
+          AND EXISTS (
+              SELECT 1 FROM product_sku s
+              WHERE s.product_id = p.id AND s.status = 'ENABLED'
+          )
+        <if test="categoryIds != null and categoryIds.size() > 0">
+            AND p.category_id IN
+            <foreach collection="categoryIds" item="categoryId" open="(" separator="," close=")">
+                #{categoryId}
+            </foreach>
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (
+                p.name LIKE CONCAT('%', #{keyword}, '%')
+                OR p.subtitle LIKE CONCAT('%', #{keyword}, '%')
+            )
+        </if>
+        <if test="minPrice != null">
+            AND EXISTS (
+                SELECT 1 FROM product_sku s2
+                WHERE s2.product_id = p.id AND s2.status = 'ENABLED' AND s2.price &gt;= #{minPrice}
+            )
+        </if>
+        <if test="maxPrice != null">
+            AND EXISTS (
+                SELECT 1 FROM product_sku s3
+                WHERE s3.product_id = p.id AND s3.status = 'ENABLED' AND s3.price &lt;= #{maxPrice}
+            )
+        </if>
+        ORDER BY
+        <choose>
+            <when test="sort == 'price_asc'">
+                (SELECT MIN(s4.price) FROM product_sku s4 WHERE s4.product_id = p.id AND s4.status = 'ENABLED') ASC,
+                p.id ASC
+            </when>
+            <when test="sort == 'price_desc'">
+                (SELECT MAX(s5.price) FROM product_sku s5 WHERE s5.product_id = p.id AND s5.status = 'ENABLED') DESC,
+                p.id DESC
+            </when>
+            <otherwise>
+                p.sort_order DESC, p.created_at DESC, p.id DESC
+            </otherwise>
+        </choose>
+    </select>
+</mapper>

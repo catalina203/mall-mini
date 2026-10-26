@@ -1,0 +1,99 @@
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+  padding: 90rpx 0;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.state-hint {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.primary {
+  margin: 0;
+  color: #ffffff;
+  background: #d9482b;
+  border: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.address-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 28rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.receiver {
+  color: #1f2329;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+
+.phone {
+  color: #4b5563;
+  font-size: 26rpx;
+}
+
+.default-tag {
+  padding: 4rpx 14rpx;
+  color: #d9482b;
+  font-size: 21rpx;
+  background: #fdf2ee;
+  border-radius: 999rpx;
+}
+
+.region {
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.detail {
+  color: #1f2329;
+  font-size: 27rpx;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 32rpx;
+  justify-content: flex-end;
+  padding-top: 16rpx;
+  margin-top: 8rpx;
+  border-top: 1rpx solid #f1f2f4;
+}
+
+.action {
+  color: #4b5563;
+  font-size: 24rpx;
+}
+
+.action.danger {
+  color: #d9482b;
+}
+
+.add {
+  margin-top: 32rpx;
+  color: #ffffff;
+  font-size: 28rpx;
+  background: #d9482b;
+  border: none;
+  border-radius: 999rpx;
+}

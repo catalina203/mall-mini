@@ -1,0 +1,50 @@
+<view class="page">
+  <view class="profile-card">
+    <view class="avatar">{{avatarText}}</view>
+    <view class="profile-main">
+      <text class="nickname">{{user ? user.nickname : '未登录'}}</text>
+      <text class="phone" wx:if="{{user && user.phone}}">{{user.phone}}</text>
+      <text class="hint" wx:else>登录后可管理购物车、地址与订单</text>
+    </view>
+    <text wx:if="{{loggedIn}}" class="logout" bindtap="onLogout">退出</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:if="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="refresh">重试</button>
+  </view>
+
+  <view wx:if="{{!loggedIn}}" class="login-card">
+    <text class="card-title">登录</text>
+    <view class="dev-note">开发登录仅用于本地联调，不是真实微信登录；生产环境默认关闭。</view>
+    <button class="dev-login" bindtap="onDevLogin" loading="{{loggingIn}}" disabled="{{loggingIn}}">
+      开发登录（测试用）
+    </button>
+    <button class="wechat-login" bindtap="onWechatLogin" loading="{{loggingIn}}" disabled="{{loggingIn}}">
+      微信登录（需服务端配置）
+    </button>
+  </view>
+
+  <view class="menu-card">
+    <view class="menu-item" bindtap="openOrders">
+      <text>我的订单</text>
+      <text class="menu-hint">阶段 5 接入</text>
+    </view>
+    <view class="menu-item" bindtap="openAddresses">
+      <text>收货地址</text>
+      <text class="menu-hint">管理</text>
+    </view>
+    <view class="menu-item">
+      <text>用户协议</text>
+      <text class="menu-hint">待补充</text>
+    </view>
+    <view class="menu-item">
+      <text>隐私说明</text>
+      <text class="menu-hint">待补充</text>
+    </view>
+  </view>
+</view>

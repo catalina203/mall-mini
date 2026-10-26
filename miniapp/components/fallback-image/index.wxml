@@ -1,0 +1,10 @@
+<image
+  wx:if="{{!failed && src}}"
+  class="image"
+  src="{{src}}"
+  mode="{{mode}}"
+  binderror="onError"
+/>
+<view wx:else class="fallback">
+  <text>暂无图片</text>
+</view>

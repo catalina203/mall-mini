@@ -1,0 +1,23 @@
+{
+  "appid": "touristappid",
+  "projectname": "mall-mini-miniapp",
+  "compileType": "miniprogram",
+  "libVersion": "3.4.10",
+  "miniprogramRoot": "./",
+  "setting": {
+    "useCompilerPlugins": ["typescript"],
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "packNpmManually": true,
+    "packNpmRelationList": [
+      {
+        "packageJsonPath": "./package.json",
+        "miniprogramNpmDistDir": "./"
+      }
+    ]
+  },
+  "condition": {}
+}

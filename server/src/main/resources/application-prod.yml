@@ -1,0 +1,19 @@
+spring:
+  flyway:
+    locations: classpath:db/migration
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+app:
+  dev-login-enabled: false
+  payment:
+    mock-enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.mallmini: INFO

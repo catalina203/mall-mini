@@ -1,0 +1,9 @@
+<view class="card" bindtap="onSelect">
+  <fallback-image class="image" src="{{product.mainImage}}" />
+  <view class="body">
+    <text class="name">{{product.name}}</text>
+    <text class="subtitle">{{product.subtitle}}</text>
+    <text class="price">{{product.priceText}}</text>
+    <text class="stock">{{product.stockText}}</text>
+  </view>
+</view>

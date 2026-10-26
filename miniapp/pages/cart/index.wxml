@@ -1,0 +1,89 @@
+<view class="page cart-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看购物车</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="state">
+      <text>正在加载…</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="load">重试</button>
+    </view>
+
+    <block wx:else>
+      <view wx:if="{{hasItems}}" class="toolbar">
+        <text class="count">共 {{cart.items.length}} 件商品</text>
+        <text class="clear" bindtap="clearAll">清空</text>
+      </view>
+
+      <view wx:if="{{hasItems}}" class="cart-list">
+        <view
+          wx:for="{{cart.items}}"
+          wx:key="id"
+          class="cart-item {{item.available ? '' : 'item-disabled'}}"
+        >
+          <view
+            class="check {{item.selected ? 'checked' : ''}} {{item.available ? '' : 'check-disabled'}}"
+            data-id="{{item.id}}"
+            bindtap="toggleSelect"
+          ></view>
+          <fallback-image class="thumb" src="{{item.productImage}}" />
+          <view class="info">
+            <text class="name">{{item.productName}}</text>
+            <text class="spec">{{item.specText}}</text>
+            <text wx:if="{{item.unavailableReason}}" class="reason">{{item.unavailableReason}}</text>
+            <view class="row">
+              <text class="price">{{item.priceText}}</text>
+              <view class="stepper">
+                <view
+                  class="step {{item.quantity <= 1 ? 'step-disabled' : ''}}"
+                  data-id="{{item.id}}"
+                  data-delta="-1"
+                  bindtap="changeQuantity"
+                >-</view>
+                <text class="quantity">{{item.quantity}}</text>
+                <view
+                  class="step {{item.quantity >= item.stock ? 'step-disabled' : ''}}"
+                  data-id="{{item.id}}"
+                  data-delta="1"
+                  bindtap="changeQuantity"
+                >+</view>
+              </view>
+            </view>
+          </view>
+          <text class="delete" data-id="{{item.id}}" bindtap="removeItem">删除</text>
+        </view>
+      </view>
+
+      <view wx:else class="state">
+        <text>购物车还是空的</text>
+        <button size="mini" class="primary" bindtap="goShopping">去逛逛</button>
+      </view>
+
+      <view wx:if="{{hasItems}}" class="summary-bar">
+        <view class="select-all" bindtap="toggleAll">
+          <view class="check {{allSelected ? 'checked' : ''}}"></view>
+          <text>全选</text>
+        </view>
+        <view class="summary-main">
+          <view class="amount-row">
+            <text class="amount-label">合计</text>
+            <text class="amount">{{cart.summary.selectedAmountText}}</text>
+          </view>
+          <text class="selected-count">已选 {{cart.summary.selectedQuantity}} 件</text>
+        </view>
+        <button
+          class="checkout"
+          bindtap="goCheckout"
+          disabled="{{cart.summary.selectedItemCount == 0}}"
+        >
+          去结算
+        </button>
+      </view>
+    </block>
+  </block>
+</view>

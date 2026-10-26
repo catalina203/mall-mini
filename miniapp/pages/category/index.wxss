@@ -1,0 +1,73 @@
+.category-page {
+  padding-top: 16rpx;
+}
+
+.root-tabs {
+  display: flex;
+  white-space: nowrap;
+  margin-bottom: 16rpx;
+}
+
+.root-tab {
+  display: inline-block;
+  padding: 18rpx 30rpx;
+  margin-right: 12rpx;
+  color: #4b5563;
+  font-size: 28rpx;
+  background: #ffffff;
+  border-radius: 999rpx;
+}
+
+.root-tab.active {
+  color: #ffffff;
+  font-weight: 600;
+  background: #d9482b;
+}
+
+.child-tabs {
+  display: flex;
+  white-space: nowrap;
+  margin-bottom: 24rpx;
+}
+
+.child-tab {
+  display: inline-block;
+  padding: 12rpx 26rpx;
+  margin-right: 12rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+  background: #eef0f3;
+  border-radius: 999rpx;
+}
+
+.child-tab.active {
+  color: #d9482b;
+  background: #fdf2ee;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20rpx;
+  padding: 90rpx 0;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.product-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+
+.product-cell {
+  width: calc(50% - 10rpx);
+}
+
+.footer {
+  padding: 30rpx 0 10rpx;
+  color: #9ca3af;
+  font-size: 24rpx;
+  text-align: center;
+}

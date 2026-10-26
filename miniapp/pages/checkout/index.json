@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "确认订单",
+  "usingComponents": {
+    "fallback-image": "/components/fallback-image/index"
+  }
+}

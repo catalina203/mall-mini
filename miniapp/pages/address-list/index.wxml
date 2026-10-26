@@ -1,0 +1,48 @@
+<view class="page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后管理收货地址</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="state">
+      <text>正在加载…</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="load">重试</button>
+    </view>
+
+    <block wx:else>
+      <view wx:if="{{addresses.length}}" class="list">
+        <view wx:for="{{addresses}}" wx:key="id" class="address-card">
+          <view class="head">
+            <text class="receiver">{{item.receiverName}}</text>
+            <text class="phone">{{item.phone}}</text>
+            <text wx:if="{{item.isDefault}}" class="default-tag">默认</text>
+          </view>
+          <text class="region">{{item.province}} {{item.city}} {{item.district}}</text>
+          <text class="detail">{{item.detail}}</text>
+          <view class="actions">
+            <text
+              wx:if="{{!item.isDefault}}"
+              class="action"
+              data-id="{{item.id}}"
+              bindtap="makeDefault"
+            >设为默认</text>
+            <text class="action" data-id="{{item.id}}" bindtap="editAddress">编辑</text>
+            <text class="action danger" data-id="{{item.id}}" bindtap="removeAddress">删除</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="state">
+        <text>暂无收货地址</text>
+        <text class="state-hint">新增地址后可在下单时选择</text>
+      </view>
+
+      <button class="add" bindtap="addAddress">新增收货地址</button>
+    </block>
+  </block>
+</view>

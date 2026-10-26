@@ -1,0 +1,60 @@
+# ---- OS / 编辑器 ----
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# ---- 环境与密钥 ----
+.env
+.env.local
+*.pem
+*.p12
+*.key
+
+# ---- Java / Maven ----
+server/target/
+*.class
+*.log
+
+# ---- Node ----
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.pnpm-store/
+
+# ---- 管理后台 ----
+admin/node_modules/
+admin/dist/
+
+# ---- 小程序 ----
+miniapp/node_modules/
+miniapp/miniprogram_npm/
+miniapp/project.config.json
+miniapp/project.private.config.json
+
+# ---- Android ----
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/*.iml
+android/.kotlin/
+android/captures/
+android/app-debug.apk
+*.jks
+*.keystore
+
+# ---- TypeScript 增量构建 ----
+*.tsbuildinfo
+
+# ---- 上传文件 ----
+server/uploads/
+uploads/
+
+# ---- 测试与报告 ----
+server/target/surefire-reports/
+test-results/
+playwright-report/

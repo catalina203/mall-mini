@@ -1,0 +1,72 @@
+<view class="page">
+  <view class="hero">
+    <text class="hero-brand">{{brandName}}</text>
+    <text class="hero-sub">国内电商小程序骨架</text>
+  </view>
+
+  <view class="search-entry" bindtap="openSearch">
+    <text class="search-hint">搜索商品名称</text>
+    <text class="search-action">搜索</text>
+  </view>
+
+  <view wx:if="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" class="retry" bindtap="load">重试</button>
+  </view>
+
+  <block wx:else>
+    <swiper
+      wx:if="{{home.banners.length}}"
+      class="banner"
+      indicator-dots
+      autoplay
+      circular
+      interval="4000"
+    >
+      <swiper-item
+        wx:for="{{home.banners}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="openBanner"
+      >
+        <fallback-image class="banner-image" src="{{item.imageUrl}}" />
+      </swiper-item>
+    </swiper>
+
+    <view wx:if="{{home.categories.length}}" class="category-grid">
+      <view
+        wx:for="{{home.categories}}"
+        wx:key="id"
+        class="category-item"
+        data-id="{{item.id}}"
+        bindtap="openCategory"
+      >
+        <view class="category-icon">{{item.name}}</view>
+        <text class="category-name">{{item.name}}</text>
+      </view>
+    </view>
+
+    <view class="section-head">
+      <text class="section-title">推荐商品</text>
+      <text class="section-hint">样例数据</text>
+    </view>
+
+    <view wx:if="{{home.recommendedProducts.length}}" class="product-grid">
+      <view
+        wx:for="{{home.recommendedProducts}}"
+        wx:key="id"
+        class="product-cell"
+      >
+        <product-card product="{{item}}" bind:select="openProduct" />
+      </view>
+    </view>
+
+    <view wx:else class="state">
+      <text>暂无商品</text>
+    </view>
+  </block>
+</view>

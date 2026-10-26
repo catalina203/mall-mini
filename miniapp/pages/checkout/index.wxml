@@ -1,0 +1,112 @@
+<view class="page checkout-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后确认订单</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="state">
+      <text>正在加载…</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="loadAddresses">重试</button>
+    </view>
+
+    <view wx:elif="{{!addresses.length}}" class="state">
+      <text>请先添加收货地址</text>
+      <button size="mini" class="primary" bindtap="addAddress">新增地址</button>
+    </view>
+
+    <block wx:elif="{{preview}}">
+      <view class="card address-card" bindtap="chooseAddress">
+        <view class="address-main">
+          <view class="address-head">
+            <text class="receiver">{{preview.address.receiverName}}</text>
+            <text class="phone">{{preview.address.phone}}</text>
+          </view>
+          <text class="address-text">{{preview.addressText}}</text>
+        </view>
+        <text class="change">更换</text>
+      </view>
+
+      <view class="card">
+        <text class="card-title">商品清单</text>
+        <view wx:for="{{preview.items}}" wx:key="skuId" class="item">
+          <fallback-image class="thumb" src="{{item.productImage}}" />
+          <view class="item-info">
+            <text class="item-name">{{item.productName}}</text>
+            <text class="item-spec">{{item.skuSpec}}</text>
+            <view class="item-row">
+              <text class="item-price">{{item.priceText}}</text>
+              <text class="item-quantity">× {{item.quantity}}</text>
+            </view>
+          </view>
+          <text class="item-subtotal">{{item.subtotalText}}</text>
+        </view>
+      </view>
+
+      <view class="card">
+        <text class="card-title">金额明细</text>
+        <view class="amount-row">
+          <text>商品金额</text>
+          <text>{{preview.goodsAmountText}}</text>
+        </view>
+        <view class="amount-row">
+          <text>运费</text>
+          <text>{{preview.shippingText}}</text>
+        </view>
+        <view wx:if="{{preview.hasDiscount}}" class="amount-row">
+          <text>优惠</text>
+          <text>-{{preview.discountAmountText}}</text>
+        </view>
+        <view class="amount-row total">
+          <text>应付金额</text>
+          <text class="total-value">{{preview.payableText}}</text>
+        </view>
+        <text class="shipping-tip">{{preview.freeShippingText}}</text>
+      </view>
+
+      <view class="pay-note">支付功能将在阶段 7 开放，当前下单后订单状态为待付款。</view>
+
+      <view class="submit-bar">
+        <view class="submit-total">
+          <text class="submit-label">应付</text>
+          <text class="submit-value">{{preview.payableText}}</text>
+        </view>
+        <button
+          class="submit-button"
+          bindtap="submit"
+          loading="{{submitting}}"
+          disabled="{{submitting}}"
+        >
+          提交订单
+        </button>
+      </view>
+    </block>
+  </block>
+
+  <view wx:if="{{pickerVisible}}" class="overlay" catchtap="closePicker">
+    <view class="sheet" catchtap="noop">
+      <text class="sheet-title">选择收货地址</text>
+      <scroll-view scroll-y class="sheet-list">
+        <view
+          wx:for="{{addresses}}"
+          wx:key="id"
+          class="sheet-item {{item.id == selectedAddressId ? 'sheet-item-active' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="selectAddress"
+        >
+          <view class="sheet-head">
+            <text class="receiver">{{item.receiverName}}</text>
+            <text class="phone">{{item.phone}}</text>
+            <text wx:if="{{item.isDefault}}" class="default-tag">默认</text>
+          </view>
+          <text class="sheet-address">{{item.province}}{{item.city}}{{item.district}}{{item.detail}}</text>
+        </view>
+      </scroll-view>
+      <button class="sheet-add" bindtap="addAddress">新增收货地址</button>
+    </view>
+  </view>
+</view>

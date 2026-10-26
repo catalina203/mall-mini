@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "fallback-image": "/components/fallback-image/index"
+  }
+}

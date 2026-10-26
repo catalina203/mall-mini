@@ -1,0 +1,16 @@
+{
+  "name": "mall-mini-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MallMini 微信小程序用户端",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tdesign-miniprogram": "^1.17.0"
+  },
+  "devDependencies": {
+    "miniprogram-api-typings": "^5.2.3",
+    "typescript": "~5.6.3"
+  }
+}

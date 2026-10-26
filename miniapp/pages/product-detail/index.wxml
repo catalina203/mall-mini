@@ -1,0 +1,103 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+
+  <block wx:else>
+    <swiper
+      wx:if="{{product.imageUrls.length}}"
+      class="gallery"
+      indicator-dots="{{product.imageUrls.length > 1}}"
+      circular
+    >
+      <swiper-item wx:for="{{product.imageUrls}}" wx:key="*this">
+        <fallback-image class="gallery-image" src="{{item}}" />
+      </swiper-item>
+    </swiper>
+
+    <view class="card">
+      <text class="price">{{product.priceText}}</text>
+      <text class="name">{{product.name}}</text>
+      <text class="subtitle">{{product.subtitle}}</text>
+      <text class="stock">{{product.stockText}}</text>
+    </view>
+
+    <view class="card">
+      <view class="select-head">
+        <text class="card-title">选择规格</text>
+        <text class="selection">{{selectionText || '请选择规格'}}</text>
+      </view>
+      <view
+        wx:for="{{product.skus}}"
+        wx:key="id"
+        class="sku {{item.available ? '' : 'sku-disabled'}} {{selectedSkuId == item.id ? 'sku-selected' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="selectSku"
+      >
+        <view class="sku-main">
+          <text class="sku-spec">{{item.specText}}</text>
+          <text class="sku-price">{{item.priceText}}</text>
+        </view>
+        <text class="sku-availability">{{item.availability}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{canBuy}}" class="card">
+      <view class="quantity-row">
+        <view class="quantity-label">
+          <text>购买数量</text>
+          <text class="stock">{{currentStockText}}</text>
+        </view>
+        <view class="stepper">
+          <view class="step {{quantity <= 1 ? 'step-disabled' : ''}}" bindtap="decrease">-</view>
+          <text class="quantity">{{quantity}}</text>
+          <view
+            class="step {{quantity >= maxQuantity ? 'step-disabled' : ''}}"
+            bindtap="increase"
+          >
+            +
+          </view>
+        </view>
+      </view>
+      <view class="summary">
+        <text class="summary-label">小计（{{currentPriceText}} × {{quantity}}）</text>
+        <text class="subtotal">{{subtotalText}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">商品描述</text>
+      <text class="description">{{product.description}}</text>
+    </view>
+
+    <view class="notice">
+      <text wx:if="{{canBuy}}">登录后可加入购物车或立即购买；支付功能将在阶段 7 开放。</text>
+      <text wx:else>该商品暂无可用规格，暂时无法购买。</text>
+    </view>
+
+    <view class="action-bar">
+      <view class="action-price">
+        <text class="action-label">小计</text>
+        <text class="action-value">{{subtotalText || product.priceText}}</text>
+      </view>
+      <button
+        class="buy-button"
+        bindtap="buyNow"
+        disabled="{{!canBuy}}"
+      >立即购买</button>
+      <button
+        class="cart-button"
+        bindtap="addToCart"
+        loading="{{adding}}"
+        disabled="{{adding || !canBuy}}"
+      >
+        {{canBuy ? '加入购物车' : '请选择规格'}}
+      </button>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,126 @@
+<view class="page order-detail-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看订单</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view wx:elif="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+
+  <block wx:elif="{{detail}}">
+    <view class="status-card {{detail.statusClass}}">
+      <text class="status-text">{{detail.statusText}}</text>
+      <text class="status-note">{{detail.statusNote}}</text>
+      <text class="payment-text">支付状态：{{detail.paymentText}}</text>
+      <view wx:if="{{detail.status == 'PENDING_PAYMENT' && paymentConfig}}" class="payment-box">
+        <text wx:if="{{paymentConfig.mockEnabled}}" class="payment-hint">
+          当前为开发环境模拟支付，不会产生真实扣款。
+        </text>
+        <text wx:else class="payment-hint">当前环境未启用支付方式。</text>
+        <button
+          wx:if="{{paymentConfig.mockEnabled}}"
+          class="pay-button"
+          bindtap="pay"
+          loading="{{paying}}"
+          disabled="{{paying}}"
+        >模拟支付（开发环境）</button>
+      </view>
+      <view class="status-actions">
+        <button
+          wx:if="{{detail.status == 'PENDING_PAYMENT'}}"
+          size="mini"
+          class="action-button danger"
+          bindtap="cancel"
+          disabled="{{acting}}"
+        >取消订单</button>
+        <button
+          wx:if="{{detail.status == 'PENDING_RECEIPT'}}"
+          size="mini"
+          class="action-button"
+          bindtap="confirmReceipt"
+          disabled="{{acting}}"
+        >确认收货</button>
+      </view>
+    </view>
+
+    <view class="card address-card">
+      <view class="address-head">
+        <text class="receiver">{{detail.address.receiverName}}</text>
+        <text class="phone">{{detail.address.phone}}</text>
+      </view>
+      <text class="address-text">{{detail.addressText}}</text>
+    </view>
+
+    <view class="card">
+      <text class="card-title">商品</text>
+      <view wx:for="{{detail.items}}" wx:key="skuId" class="item">
+        <fallback-image class="thumb" src="{{item.productImage}}" />
+        <view class="item-info">
+          <text class="item-name">{{item.productName}}</text>
+          <text class="item-spec">{{item.skuSpec}}</text>
+          <view class="item-row">
+            <text class="item-price">{{item.priceText}}</text>
+            <text class="item-quantity">× {{item.quantity}}</text>
+          </view>
+        </view>
+        <text class="item-subtotal">{{item.subtotalText}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">金额</text>
+      <view class="amount-row">
+        <text>商品金额</text>
+        <text>{{detail.goodsText}}</text>
+      </view>
+      <view class="amount-row">
+        <text>运费</text>
+        <text>{{detail.shippingText}}</text>
+      </view>
+      <view wx:if="{{detail.discountText != '¥0.00'}}" class="amount-row">
+        <text>优惠</text>
+        <text>-{{detail.discountText}}</text>
+      </view>
+      <view class="amount-row total">
+        <text>应付金额</text>
+        <text class="total-value">{{detail.payableText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detail.logisticsNo}}" class="card">
+      <text class="card-title">物流信息</text>
+      <view class="info-row"><text>物流公司</text><text>{{detail.logisticsCompany}}</text></view>
+      <view class="info-row"><text>物流单号</text><text>{{detail.logisticsNo}}</text></view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">订单信息</text>
+      <view class="info-row"><text>订单号</text><text>{{detail.orderNo}}</text></view>
+      <view class="info-row"><text>下单时间</text><text>{{detail.createdAtText}}</text></view>
+      <view wx:if="{{detail.paidAtText}}" class="info-row"><text>支付时间</text><text>{{detail.paidAtText}}</text></view>
+      <view wx:if="{{detail.shippedAtText}}" class="info-row"><text>发货时间</text><text>{{detail.shippedAtText}}</text></view>
+      <view wx:if="{{detail.completedAtText}}" class="info-row"><text>完成时间</text><text>{{detail.completedAtText}}</text></view>
+      <view wx:if="{{detail.cancelledAtText}}" class="info-row"><text>取消时间</text><text>{{detail.cancelledAtText}}</text></view>
+      <view wx:if="{{detail.cancelReason}}" class="info-row"><text>取消原因</text><text>{{detail.cancelReason}}</text></view>
+      <view wx:if="{{detail.remark}}" class="info-row"><text>备注</text><text>{{detail.remark}}</text></view>
+    </view>
+
+    <view wx:if="{{detail.logs.length}}" class="card">
+      <text class="card-title">状态记录</text>
+      <view wx:for="{{detail.logs}}" wx:key="createdText" class="log-item">
+        <view class="log-dot"></view>
+        <view class="log-content">
+          <text class="log-title">{{item.fromText}} → {{item.toText}}</text>
+          <text class="log-meta">{{item.operatorType}} · {{item.createdText}}</text>
+          <text wx:if="{{item.remark}}" class="log-remark">{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

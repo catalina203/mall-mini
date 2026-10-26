@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "商品详情",
+  "usingComponents": {
+    "fallback-image": "/components/fallback-image/index"
+  }
+}

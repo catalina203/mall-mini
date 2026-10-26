@@ -1,0 +1,65 @@
+<view class="page category-page">
+  <scroll-view wx:if="{{categories.length}}" scroll-x class="root-tabs" enhanced show-scrollbar="{{false}}">
+    <view
+      wx:for="{{categories}}"
+      wx:key="id"
+      class="root-tab {{activeRootId == item.id ? 'active' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="selectRoot"
+    >
+      {{item.name}}
+    </view>
+  </scroll-view>
+
+  <scroll-view
+    wx:if="{{children.length}}"
+    scroll-x
+    class="child-tabs"
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <view
+      class="child-tab {{activeCategoryId == activeRootId ? 'active' : ''}}"
+      data-id="{{activeRootId}}"
+      bindtap="selectRoot"
+    >
+      全部
+    </view>
+    <view
+      wx:for="{{children}}"
+      wx:key="id"
+      class="child-tab {{activeCategoryId == item.id ? 'active' : ''}}"
+      data-id="{{item.id}}"
+      bindtap="selectChild"
+    >
+      {{item.name}}
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="retry">重试</button>
+  </view>
+
+  <block wx:else>
+    <view wx:if="{{products.length}}" class="product-grid">
+      <view wx:for="{{products}}" wx:key="id" class="product-cell">
+        <product-card product="{{item}}" bind:select="openProduct" />
+      </view>
+    </view>
+
+    <view wx:else class="state">
+      <text>{{categories.length ? '该分类暂无商品' : '暂无分类'}}</text>
+    </view>
+
+    <view wx:if="{{products.length}}" class="footer">
+      <text wx:if="{{loadingMore}}">正在加载更多…</text>
+      <text wx:elif="{{hasMore}}">上拉加载更多</text>
+      <text wx:else>没有更多了</text>
+    </view>
+  </block>
+</view>

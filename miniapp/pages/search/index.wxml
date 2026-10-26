@@ -1,0 +1,74 @@
+<view class="page search-page">
+  <view class="search-bar">
+    <input
+      class="search-input"
+      value="{{keyword}}"
+      placeholder="输入商品关键词"
+      confirm-type="search"
+      focus
+      bindinput="onKeywordInput"
+      bindconfirm="search"
+    />
+    <text wx:if="{{keyword}}" class="clear" bindtap="clearKeyword">清空</text>
+    <button class="search-button" size="mini" bindtap="search">搜索</button>
+  </view>
+
+  <block wx:if="{{!searched}}">
+    <view wx:if="{{recent.length}}" class="recent">
+      <view class="section-head">
+        <text class="section-title">最近搜索</text>
+        <text class="section-action" bindtap="clearRecent">清空记录</text>
+      </view>
+      <view class="chips">
+        <view
+          wx:for="{{recent}}"
+          wx:key="*this"
+          class="chip"
+          data-keyword="{{item}}"
+          bindtap="useRecent"
+        >
+          {{item}}
+        </view>
+      </view>
+    </view>
+    <view wx:else class="state">
+      <text>输入关键词搜索商品</text>
+      <text class="state-hint">最近搜索记录仅保存在本机</text>
+    </view>
+  </block>
+
+  <block wx:else>
+    <view wx:if="{{loading}}" class="state">
+      <text>正在搜索…</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="retry">重试</button>
+    </view>
+
+    <block wx:else>
+      <view class="result-head">
+        <text class="result-keyword">{{searchedKeyword}}</text>
+        <text class="result-count">共 {{total}} 件</text>
+      </view>
+
+      <view wx:if="{{products.length}}" class="product-grid">
+        <view wx:for="{{products}}" wx:key="id" class="product-cell">
+          <product-card product="{{item}}" bind:select="openProduct" />
+        </view>
+      </view>
+
+      <view wx:else class="state">
+        <text>没有找到相关商品</text>
+        <text class="state-hint">换个关键词试试</text>
+      </view>
+
+      <view wx:if="{{products.length}}" class="footer">
+        <text wx:if="{{loadingMore}}">正在加载更多…</text>
+        <text wx:elif="{{hasMore}}">上拉加载更多</text>
+        <text wx:else>没有更多了</text>
+      </view>
+    </block>
+  </block>
+</view>
