@@ -1,0 +1,61 @@
+.agreement-page {
+  padding-top: 20rpx;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.title {
+  color: #1f2329;
+  font-size: 34rpx;
+  font-weight: 600;
+}
+
+.meta {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.notice {
+  padding: 22rpx 24rpx;
+  margin-bottom: 20rpx;
+  color: #8a3a26;
+  font-size: 24rpx;
+  line-height: 1.7;
+  background: #fdf2ee;
+  border-radius: 14rpx;
+}
+
+.section-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 28rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.section-heading {
+  color: #1f2329;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.section-body {
+  color: #4b5563;
+  font-size: 25rpx;
+  line-height: 1.75;
+}

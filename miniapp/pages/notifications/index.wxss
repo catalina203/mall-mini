@@ -1,0 +1,87 @@
+.notifications-page {
+  padding-top: 16rpx;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 90rpx 0;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.state-hint {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.primary {
+  margin: 0;
+  color: #ffffff;
+  background: #d9482b;
+  border: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.notice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 26rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.notice-card.unread {
+  border-left: 6rpx solid #d9482b;
+}
+
+.notice-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+
+.notice-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.dot {
+  width: 12rpx;
+  height: 12rpx;
+  background: #d9482b;
+  border-radius: 50%;
+}
+
+.title {
+  color: #1f2329;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.time {
+  flex-shrink: 0;
+  color: #9ca3af;
+  font-size: 21rpx;
+}
+
+.content {
+  color: #4b5563;
+  font-size: 24rpx;
+  line-height: 1.65;
+}
+
+.link {
+  color: #d9482b;
+  font-size: 23rpx;
+}

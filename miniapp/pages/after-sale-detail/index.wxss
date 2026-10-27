@@ -1,0 +1,254 @@
+.after-sale-detail-page {
+  padding-top: 16rpx;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+  padding: 90rpx 0;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.primary {
+  margin: 0;
+  color: #ffffff;
+  background: #d9482b;
+  border: none;
+}
+
+.status-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 30rpx;
+  margin-bottom: 20rpx;
+  color: #ffffff;
+  border-radius: 18rpx;
+  background: linear-gradient(135deg, #4b5563, #9ca3af);
+}
+
+.status-card.status-applied,
+.status-card.status-approved {
+  background: linear-gradient(135deg, #b45309, #d97706);
+}
+
+.status-card.status-wait-return,
+.status-card.status-returned,
+.status-card.status-return-received,
+.status-card.status-refunding {
+  background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+}
+
+.status-card.status-refunded {
+  background: linear-gradient(135deg, #047857, #10b981);
+}
+
+.status-card.status-refund-failed {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+}
+
+.status-text {
+  font-size: 36rpx;
+  font-weight: 600;
+}
+
+.status-note {
+  font-size: 24rpx;
+  line-height: 1.5;
+  opacity: 0.92;
+}
+
+.status-meta {
+  font-size: 22rpx;
+  opacity: 0.85;
+}
+
+.status-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8rpx;
+}
+
+.action-button {
+  margin: 0;
+  color: #ffffff;
+  font-size: 23rpx;
+  background: rgb(255 255 255 / 22%);
+  border: none;
+  border-radius: 999rpx;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-title {
+  color: #1f2329;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.link {
+  color: #d9482b;
+  font-size: 23rpx;
+}
+
+.info-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20rpx;
+  color: #4b5563;
+  font-size: 25rpx;
+}
+
+.info-row text:last-child {
+  max-width: 65%;
+  text-align: right;
+  word-break: break-all;
+}
+
+.info-row.fail {
+  color: #b91c1c;
+}
+
+.total-row {
+  padding-top: 14rpx;
+  margin-top: 4rpx;
+  color: #1f2329;
+  font-weight: 600;
+  border-top: 1rpx solid #f1f2f4;
+}
+
+.total-row text:last-child {
+  color: #d9482b;
+  font-size: 30rpx;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #f1f2f4;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 12rpx;
+}
+
+.item-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.item-name {
+  overflow: hidden;
+  color: #1f2329;
+  font-size: 27rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-spec {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.item-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.item-price {
+  color: #d9482b;
+  font-size: 25rpx;
+}
+
+.item-quantity {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.item-refund {
+  color: #1f2329;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.field {
+  height: 76rpx;
+  padding: 0 22rpx;
+  color: #1f2329;
+  font-size: 25rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+
+.primary-button {
+  margin-top: 8rpx;
+  color: #ffffff;
+  font-size: 27rpx;
+  background: #d9482b;
+  border: none;
+}
+
+.log-item {
+  display: flex;
+  gap: 16rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx solid #f1f2f4;
+}
+
+.log-dot {
+  flex-shrink: 0;
+  width: 14rpx;
+  height: 14rpx;
+  margin-top: 10rpx;
+  background: #d9482b;
+  border-radius: 50%;
+}
+
+.log-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5rpx;
+}
+
+.log-title {
+  color: #1f2329;
+  font-size: 25rpx;
+  font-weight: 500;
+}
+
+.log-meta {
+  color: #9ca3af;
+  font-size: 21rpx;
+}
+
+.log-remark {
+  color: #6b7280;
+  font-size: 23rpx;
+}

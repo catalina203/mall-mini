@@ -5,11 +5,14 @@ import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.mallmini.common.exception.BusinessException;
 import com.mallmini.common.exception.ErrorCode;
 import com.mallmini.config.AppProperties;
+import com.mallmini.notification.service.NotificationService;
 import com.mallmini.order.entity.MallOrder;
+import com.mallmini.order.entity.MallOrderItem;
 import com.mallmini.order.entity.OrderStatusLog;
 import com.mallmini.order.enums.OrderOperatorType;
 import com.mallmini.order.enums.OrderStatus;
 import com.mallmini.order.enums.PaymentStatus;
+import com.mallmini.order.mapper.MallOrderItemMapper;
 import com.mallmini.order.mapper.MallOrderMapper;
 import com.mallmini.order.mapper.OrderStatusLogMapper;
 import com.mallmini.order.service.OrderService;
@@ -21,11 +24,14 @@ import com.mallmini.payment.gateway.PaymentResult;
 import com.mallmini.payment.mapper.PaymentRecordMapper;
 import com.mallmini.payment.vo.PaymentConfigVO;
 import com.mallmini.payment.vo.PaymentResultVO;
+import com.mallmini.product.mapper.ProductMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -35,9 +41,12 @@ public class PaymentService {
     private final MallOrderMapper orderMapper;
     private final PaymentRecordMapper paymentRecordMapper;
     private final OrderStatusLogMapper statusLogMapper;
+    private final MallOrderItemMapper orderItemMapper;
+    private final ProductMapper productMapper;
     private final OrderService orderService;
     private final Optional<PaymentGateway> paymentGateway;
     private final AppProperties properties;
+    private final NotificationService notificationService;
 
     public PaymentConfigVO config() {
         String channel = paymentGateway.map(PaymentGateway::channel).orElse("");
@@ -101,6 +110,23 @@ public class PaymentService {
         log.setOperatorType(OrderOperatorType.PAYMENT.name());
         log.setRemark("MOCK".equals(gateway.channel()) ? "模拟支付成功" : "支付成功");
         statusLogMapper.insert(log);
+        List<MallOrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<MallOrderItem>()
+                        .eq(MallOrderItem::getOrderId, order.getId()));
+        for (MallOrderItem item : items) {
+            productMapper.incrementSales(item.getProductId(),
+                    item.getQuantity() == null ? 0 : item.getQuantity());
+        }
+        notificationService.notifyUser(
+                order.getUserId(),
+                "ORDER_PAID",
+                "支付成功",
+                "订单 " + order.getOrderNo() + " 已支付 "
+                        + order.getPayableAmount().toPlainString() + " 元。",
+                "ORDER",
+                order.getOrderNo(),
+                Map.of("orderNo", order.getOrderNo(),
+                        "amount", order.getPayableAmount()));
 
         return new PaymentResultVO(
                 "MOCK".equals(gateway.channel()),

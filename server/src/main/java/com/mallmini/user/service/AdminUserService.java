@@ -48,6 +48,8 @@ public class AdminUserService {
                         user.getAvatarUrl(),
                         MaskUtils.maskPhone(user.getPhone()),
                         user.getStatus(),
+                        user.getPoints() == null ? 0 : user.getPoints(),
+                        user.getMemberLevel() == null ? "NORMAL" : user.getMemberLevel(),
                         user.getCreatedAt()))
                 .toList();
         return PageResult.of(items, safePage, safePageSize, userPage.getTotal());

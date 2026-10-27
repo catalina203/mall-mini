@@ -13,6 +13,7 @@ import com.mallmini.product.mapper.ProductMapper;
 import com.mallmini.product.mapper.ProductSkuMapper;
 import com.mallmini.product.vo.ProductDetailVO;
 import com.mallmini.product.vo.ProductSummaryVO;
+import com.mallmini.search.service.SearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,6 +45,9 @@ class ProductServiceTest {
     @Mock
     private CategoryService categoryService;
 
+    @Mock
+    private SearchService searchService;
+
     private ProductService productService;
 
     @BeforeEach
@@ -53,7 +57,8 @@ class ProductServiceTest {
                 productSkuMapper,
                 productImageMapper,
                 categoryService,
-                new SpecJsonParser(new ObjectMapper()));
+                new SpecJsonParser(new ObjectMapper()),
+                searchService);
     }
 
     @Test

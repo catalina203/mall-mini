@@ -2,7 +2,10 @@ package com.mallmini.payment.service;
 
 import com.mallmini.common.exception.BusinessException;
 import com.mallmini.config.AppProperties;
+import com.mallmini.notification.service.NotificationService;
 import com.mallmini.order.entity.MallOrder;
+import com.mallmini.order.mapper.MallOrderItemMapper;
+import com.mallmini.product.mapper.ProductMapper;
 import com.mallmini.order.entity.OrderStatusLog;
 import com.mallmini.order.mapper.MallOrderMapper;
 import com.mallmini.order.mapper.OrderStatusLogMapper;
@@ -45,6 +48,12 @@ class PaymentServiceTest {
     private OrderService orderService;
     @Mock
     private PaymentGateway paymentGateway;
+    @Mock
+    private NotificationService notificationService;
+    @Mock
+    private MallOrderItemMapper orderItemMapper;
+    @Mock
+    private ProductMapper productMapper;
 
     private AppProperties properties;
 
@@ -132,7 +141,8 @@ class PaymentServiceTest {
 
     private PaymentService service(Optional<PaymentGateway> gateway) {
         return new PaymentService(orderMapper, paymentRecordMapper, statusLogMapper,
-                orderService, gateway, properties);
+                orderItemMapper, productMapper, orderService, gateway, properties,
+                notificationService);
     }
 
     private MallOrder order(String status, String paymentStatus) {

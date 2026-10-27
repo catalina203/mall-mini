@@ -109,3 +109,31 @@
 .product-cell {
   width: calc(50% - 10rpx);
 }
+
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12rpx;
+  padding: 0 0 20rpx;
+}
+
+.service-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  padding: 22rpx 16rpx;
+  background: #ffffff;
+  border-radius: 14rpx;
+}
+
+.service-title {
+  color: #1f2329;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.service-desc {
+  color: #9ca3af;
+  font-size: 20rpx;
+}

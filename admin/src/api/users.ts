@@ -17,3 +17,11 @@ export async function fetchUsers(params: UserQuery): Promise<PageResult<AdminUse
 export async function updateUserStatus(id: number, status: string): Promise<void> {
   await http.patch(`/admin/users/${id}/status`, { status })
 }
+
+export async function adjustUserPoints(
+  id: number,
+  delta: number,
+  remark: string,
+): Promise<void> {
+  await http.post(`/admin/users/${id}/points`, { delta, remark: remark.trim() || undefined })
+}

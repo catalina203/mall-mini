@@ -2,7 +2,6 @@
 import { computed, onMounted, ref } from 'vue'
 import {
   ArrowRight,
-  Box,
   Clock,
   Goods,
   FolderOpened,
@@ -10,6 +9,7 @@ import {
   ShoppingCart,
   Tickets,
   TrendCharts,
+  Warning,
 } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { fetchDashboardSummary } from '@/api/dashboard'
@@ -39,34 +39,47 @@ const rangeText = computed(() => {
 
 const metrics = computed(() => [
   {
-    label: '订单总数',
-    value: summary.value ? String(summary.value.orderCount) : '—',
-    hint: `近 ${days.value} 天创建`,
+    label: '已支付订单',
+    value: summary.value ? String(summary.value.paidOrderCount) : '—',
+    hint: `近 ${days.value} 天`,
     icon: Tickets,
     tone: 'sand',
   },
   {
-    label: '待发货',
-    value: summary.value ? String(summary.value.pendingShipmentCount) : '—',
-    hint: '需要尽快处理',
-    icon: Box,
-    tone: 'amber',
+    label: '客单价',
+    value: summary.value ? formatPrice(summary.value.averageOrderValue) : '—',
+    hint: '净收入 / 已支付订单',
+    icon: ShoppingCart,
+    tone: 'sage',
   },
   {
-    label: '待收货',
-    value: summary.value ? String(summary.value.pendingReceiptCount) : '—',
-    hint: '在途订单',
-    icon: Clock,
-    tone: 'sage',
+    label: '退款率',
+    value: summary.value ? `${Number(summary.value.refundRate).toFixed(2)}%` : '—',
+    hint: '退款金额 / 支付金额',
+    icon: Warning,
+    tone: 'rose',
   },
   {
     label: '今日订单',
     value: summary.value ? String(summary.value.todayOrderCount) : '—',
     hint: '今日 00:00 起',
-    icon: ShoppingCart,
-    tone: 'rose',
+    icon: Clock,
+    tone: 'amber',
   },
 ])
+
+const trendMax = computed(() => {
+  const values = summary.value?.trend.map((item) => Number(item.paidAmount)) ?? []
+  return Math.max(...values, 1)
+})
+
+const trendBars = computed(() =>
+  (summary.value?.trend ?? []).slice(-14).map((item) => ({
+    ...item,
+    height: Math.max((Number(item.paidAmount) / trendMax.value) * 100, 2),
+    label: item.date.slice(5),
+  })),
+)
 
 const quickActions = [
   { title: '商品管理', desc: '上下架、SKU 与库存', to: '/products', icon: Goods },
@@ -126,9 +139,13 @@ onMounted(load)
         </div>
         <p class="revenue-label">{{ greeting }}</p>
         <strong class="revenue-value">
-          {{ summary ? formatPrice(summary.paidAmount) : '—' }}
+          {{ summary ? formatPrice(summary.netAmount) : '—' }}
         </strong>
-        <p class="revenue-caption">已支付订单销售额</p>
+        <p class="revenue-caption">净收入（支付金额 − 退款金额）</p>
+        <div class="revenue-split">
+          <span>支付 {{ summary ? formatPrice(summary.paidAmount) : '—' }}</span>
+          <span>退款 {{ summary ? formatPrice(summary.refundAmount) : '—' }}</span>
+        </div>
         <div class="revenue-foot">
           <span>{{ rangeText }}</span>
         </div>
@@ -148,6 +165,25 @@ onMounted(load)
             <span class="metric-hint">{{ item.hint }}</span>
           </div>
         </article>
+      </div>
+    </section>
+
+    <section v-if="summary" class="trend-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-eyebrow">REVENUE TREND</p>
+          <h2>支付趋势</h2>
+        </div>
+        <span class="panel-note">最近 14 天，按支付金额</span>
+      </div>
+      <div class="trend-bars">
+        <div v-for="bar in trendBars" :key="bar.date" class="trend-bar">
+          <div class="bar-track">
+            <div class="bar-fill" :style="{ height: `${bar.height}%` }"></div>
+          </div>
+          <span class="bar-label">{{ bar.label }}</span>
+          <span class="bar-value">{{ formatPrice(bar.paidAmount) }}</span>
+        </div>
       </div>
     </section>
 
@@ -197,13 +233,21 @@ onMounted(load)
             </span>
             <span class="todo-count">{{ summary?.pendingReceiptCount ?? '—' }}</span>
           </router-link>
-          <router-link to="/products" class="todo-item">
+          <router-link to="/after-sales" class="todo-item">
             <span class="todo-dot todo-dot-rose"></span>
             <span class="todo-copy">
-              <strong>商品运营</strong>
-              <small>检查库存与在售状态</small>
+              <strong>售后待处理</strong>
+              <small>审核、退货与退款</small>
             </span>
-            <el-icon class="todo-arrow"><ArrowRight /></el-icon>
+            <span class="todo-count">{{ summary?.pendingAfterSaleCount ?? '—' }}</span>
+          </router-link>
+          <router-link to="/stock" class="todo-item">
+            <span class="todo-dot todo-dot-sage"></span>
+            <span class="todo-copy">
+              <strong>低库存 SKU</strong>
+              <small>低于预警阈值</small>
+            </span>
+            <span class="todo-count">{{ summary?.lowStockCount ?? '—' }}</span>
           </router-link>
         </div>
         <p v-if="summary" class="panel-foot">
@@ -213,7 +257,7 @@ onMounted(load)
     </section>
 
     <p class="footnote">
-      统计口径：订单数为所选区间内创建的订单；销售额为支付状态 PAID 的订单应付金额之和；待发货、待收货为当前全部订单。
+      统计口径：支付金额为区间内已支付订单应付金额（含后续退款）；退款金额为区间内成功的退款；净收入 = 支付金额 − 退款金额；客单价 = 净收入 / 已支付订单数；退款率 = 退款金额 / 支付金额。待发货、待收货、售后与低库存为当前全量。
     </p>
   </div>
 </template>
@@ -587,5 +631,71 @@ onMounted(load)
   .metric-card {
     padding: 16px;
   }
+}
+</style>
+
+<style scoped>
+.revenue-split {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  color: rgb(248 241 234 / 62%);
+  font-size: 10px;
+}
+
+.trend-panel {
+  padding: 20px 22px 16px;
+  margin-top: 18px;
+  background: #fffdf9;
+  border: 1px solid var(--mall-line);
+  border-radius: var(--mall-radius-lg);
+}
+
+.trend-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  height: 180px;
+  padding-top: 12px;
+  overflow-x: auto;
+}
+
+.trend-bar {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 46px;
+  height: 100%;
+}
+
+.bar-track {
+  display: flex;
+  flex: 1;
+  align-items: flex-end;
+  width: 100%;
+  min-height: 0;
+  background: linear-gradient(180deg, rgb(239 138 99 / 8%), transparent);
+  border-radius: 8px 8px 4px 4px;
+}
+
+.bar-fill {
+  width: 100%;
+  background: linear-gradient(180deg, #ef8a63, #c8472b);
+  border-radius: 8px 8px 4px 4px;
+  transition: height 0.3s ease;
+}
+
+.bar-label {
+  color: var(--mall-faint);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.bar-value {
+  color: var(--mall-muted);
+  font-size: 9px;
+  white-space: nowrap;
 }
 </style>

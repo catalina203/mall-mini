@@ -14,6 +14,7 @@ public record AdminProductDetailVO(
         String mainImage,
         String status,
         Integer sortOrder,
+        Long shippingTemplateId,
         List<ProductImageVO> images,
         List<AdminSkuVO> skus
 ) {

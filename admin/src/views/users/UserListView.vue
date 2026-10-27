@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
-import { fetchUsers, updateUserStatus } from '@/api/users'
+import { adjustUserPoints, fetchUsers, updateUserStatus } from '@/api/users'
+import { exportUsers } from '@/api/exports'
+import { useAuthStore } from '@/stores/auth'
+import { downloadBlob } from '@/utils/download'
 import type { AdminUser } from '@/types/admin'
 import { formatDateTime } from '@/utils/format'
 
+const auth = useAuthStore()
 const loading = ref(false)
+const exporting = ref(false)
 const error = ref('')
 const items = ref<AdminUser[]>([])
+const pointsVisible = ref(false)
+const pointsSaving = ref(false)
+const pointsForm = reactive({ id: 0, nickname: '', delta: 0, remark: '' })
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(20)
@@ -66,9 +74,57 @@ async function toggleStatus(row: AdminUser) {
   }
 }
 
+function openPoints(row: AdminUser) {
+  pointsForm.id = row.id
+  pointsForm.nickname = row.nickname || `用户 #${row.id}`
+  pointsForm.delta = 0
+  pointsForm.remark = ''
+  pointsVisible.value = true
+}
+
+async function submitPoints() {
+  if (pointsSaving.value) return
+  if (!pointsForm.delta) {
+    ElMessage.warning('积分变动不能为 0')
+    return
+  }
+  pointsSaving.value = true
+  try {
+    await adjustUserPoints(pointsForm.id, pointsForm.delta, pointsForm.remark)
+    ElMessage.success('积分已调整')
+    pointsVisible.value = false
+    await load()
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : '调整失败')
+  } finally {
+    pointsSaving.value = false
+  }
+}
+
+function levelText(level: string): string {
+  return ({ NORMAL: '普通会员', SILVER: '银卡', GOLD: '金卡', PLATINUM: '钻石' } as Record<string, string>)[level] ?? level
+}
+
 function changePage(value: number) {
   page.value = value
   void load()
+}
+
+async function exportList() {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const { blob, filename } = await exportUsers({
+      keyword: keyword.value.trim() || undefined,
+      status: status.value || undefined,
+    })
+    downloadBlob(blob, filename)
+    ElMessage.success('导出已开始')
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : '导出失败')
+  } finally {
+    exporting.value = false
+  }
 }
 
 onMounted(load)
@@ -80,7 +136,16 @@ onMounted(load)
       eyebrow="CUSTOMERS"
       title="用户管理"
       description="查看小程序用户与账号状态。手机号默认脱敏展示，状态变更会写入管理员操作日志。"
-    />
+    >
+      <template #actions>
+        <el-button
+          v-if="auth.can('EXPORT_READ')"
+          :icon="Download"
+          :loading="exporting"
+          @click="exportList"
+        >导出 CSV</el-button>
+      </template>
+    </PageHeader>
 
     <el-alert v-if="error" type="error" :closable="false" :title="error">
       <template #default>
@@ -130,6 +195,14 @@ onMounted(load)
               <span class="mono">{{ row.phone || '—' }}</span>
             </template>
           </el-table-column>
+          <el-table-column label="会员/积分" width="150">
+            <template #default="{ row }">
+              <div class="member-cell">
+                <span>{{ levelText(row.memberLevel) }}</span>
+                <span class="subtle">{{ row.points }} 积分</span>
+              </div>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="110">
             <template #default="{ row }">
               <el-tag :type="row.status === 'ACTIVE' ? 'success' : 'info'" effect="light">
@@ -142,6 +215,7 @@ onMounted(load)
           </el-table-column>
           <el-table-column label="操作" width="120" fixed="right">
             <template #default="{ row }">
+              <el-button link type="primary" @click="openPoints(row)">调整积分</el-button>
               <el-button link type="primary" @click="toggleStatus(row)">
                 {{ row.status === 'ACTIVE' ? '禁用账号' : '启用账号' }}
               </el-button>
@@ -161,6 +235,22 @@ onMounted(load)
       </div>
     </div>
   </div>
+
+    <el-dialog v-model="pointsVisible" title="调整积分" width="420px">
+      <p class="points-hint">用户：<strong>{{ pointsForm.nickname }}</strong></p>
+      <el-form label-position="top">
+        <el-form-item label="积分变动（正数增加，负数扣减）" required>
+          <el-input-number v-model="pointsForm.delta" :step="10" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="pointsForm.remark" maxlength="255" placeholder="例如：活动补偿" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="pointsVisible = false">取消</el-button>
+        <el-button type="primary" :loading="pointsSaving" @click="submitPoints">确认调整</el-button>
+      </template>
+    </el-dialog>
 </template>
 
 <style scoped>
@@ -172,6 +262,19 @@ onMounted(load)
 
 .table-wrap {
   padding: 0 14px;
+}
+
+.member-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.points-hint {
+  margin: 0 0 12px;
+  color: var(--mall-muted);
+  font-size: 12px;
 }
 
 .user-cell {

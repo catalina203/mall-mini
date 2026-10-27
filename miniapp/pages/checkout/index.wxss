@@ -288,3 +288,84 @@
   border: none;
   border-radius: 999rpx;
 }
+
+
+.invoice-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.invoice-hint {
+  color: #9ca3af;
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.field {
+  height: 76rpx;
+  padding: 0 22rpx;
+  color: #1f2329;
+  font-size: 25rpx;
+  background: #f7f8fa;
+  border-radius: 12rpx;
+}
+
+
+.coupon-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.coupon-link {
+  color: #d9482b;
+  font-size: 23rpx;
+}
+
+.coupon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.coupon-chip {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 16rpx 20rpx;
+  background: #fdf2ee;
+  border: 2rpx solid transparent;
+  border-radius: 12rpx;
+}
+
+.coupon-chip-active {
+  border-color: #d9482b;
+}
+
+.coupon-chip-clear {
+  justify-content: center;
+  background: #f7f8fa;
+}
+
+.coupon-value {
+  color: #d9482b;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.coupon-name {
+  flex: 1;
+  color: #1f2329;
+  font-size: 24rpx;
+}
+
+.coupon-condition {
+  color: #9ca3af;
+  font-size: 21rpx;
+}
+
+.coupon-empty {
+  color: #9ca3af;
+  font-size: 23rpx;
+}

@@ -40,3 +40,14 @@ export async function cancelOrder(orderNo: string, reason: string): Promise<Admi
   })
   return response.data.data
 }
+
+export async function updateOrderRemark(
+  orderNo: string,
+  remark: string,
+): Promise<AdminOrderDetail> {
+  const response = await http.patch<ApiResponse<AdminOrderDetail>>(
+    `/admin/orders/${orderNo}/remark`,
+    { remark },
+  )
+  return response.data.data
+}

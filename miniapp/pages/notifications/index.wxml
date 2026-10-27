@@ -1,0 +1,40 @@
+<view class="page notifications-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看通知</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view wx:elif="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="retry">重试</button>
+  </view>
+
+  <view wx:elif="{{items.length}}" class="list">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="notice-card {{item.read ? '' : 'unread'}}"
+      data-index="{{index}}"
+      bindtap="open"
+    >
+      <view class="notice-head">
+        <view class="notice-title-row">
+          <view wx:if="{{!item.read}}" class="dot"></view>
+          <text class="title">{{item.title}}</text>
+        </view>
+        <text class="time">{{item.createdText}}</text>
+      </view>
+      <text class="content">{{item.content}}</text>
+      <text wx:if="{{item.targetUrl}}" class="link">查看详情 ›</text>
+    </view>
+  </view>
+
+  <view wx:else class="state">
+    <text>暂无通知</text>
+    <text class="state-hint">支付、发货、售后与退款进度会在这里提醒</text>
+  </view>
+</view>

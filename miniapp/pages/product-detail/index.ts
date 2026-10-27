@@ -1,4 +1,6 @@
 import { getProduct } from '../../services/catalog'
+import { addFavorite, isFavorite, recordHistory, removeFavorite } from '../../services/favorite'
+import { getReviewSummary } from '../../services/review'
 import { addCartItem } from '../../services/cart'
 import { isLoggedIn } from '../../store/auth'
 import type { ProductDetail, Sku } from '../../types/api'
@@ -37,6 +39,9 @@ Page({
     maxQuantity: 1,
     canBuy: false,
     adding: false,
+    favorite: false,
+    reviewCount: 0,
+    averageRating: '0.0',
   },
 
   onLoad(options: Record<string, string | undefined>) {
@@ -64,12 +69,71 @@ Page({
       this.setData({ loading: false, product }, () => {
         this.applySelection(autoSkuId)
       })
+      void this.loadExtras(detail.id)
     } catch (error) {
       this.setData({
         loading: false,
         error: error instanceof Error ? error.message : '商品加载失败',
       })
     }
+  },
+
+  async loadExtras(productId: number) {
+    try {
+      const summary = await getReviewSummary(productId)
+      this.setData({
+        reviewCount: summary.reviewCount,
+        averageRating: Number(summary.averageRating).toFixed(1),
+      })
+    } catch {
+      this.setData({ reviewCount: 0, averageRating: '0.0' })
+    }
+    if (!isLoggedIn()) {
+      return
+    }
+    try {
+      this.setData({ favorite: await isFavorite(productId) })
+    } catch {
+      this.setData({ favorite: false })
+    }
+    try {
+      await recordHistory(productId)
+    } catch {
+      // 浏览足迹失败不影响商品浏览
+    }
+  },
+
+  async toggleFavorite() {
+    if (!this.requireLogin()) {
+      return
+    }
+    const productId = Number(this.data.id)
+    if (!productId) {
+      return
+    }
+    try {
+      if (this.data.favorite) {
+        await removeFavorite(productId)
+        this.setData({ favorite: false })
+        wx.showToast({ title: '已取消收藏', icon: 'none' })
+      } else {
+        await addFavorite(productId)
+        this.setData({ favorite: true })
+        wx.showToast({ title: '已收藏', icon: 'success' })
+      }
+    } catch (error) {
+      wx.showToast({
+        title: error instanceof Error ? error.message : '操作失败',
+        icon: 'none',
+      })
+    }
+  },
+
+  openReviews() {
+    if (!this.data.id) {
+      return
+    }
+    wx.navigateTo({ url: `/pages/product-reviews/index?productId=${this.data.id}` })
   },
 
   selectSku(event: WechatMiniprogram.TouchEvent) {

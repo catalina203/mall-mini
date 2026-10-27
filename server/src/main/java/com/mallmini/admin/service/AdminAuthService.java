@@ -35,7 +35,8 @@ public class AdminAuthService {
 
         admin.setLastLoginAt(LocalDateTime.now());
         adminUserMapper.updateById(admin);
-        return new AdminTokenVO(jwtService.generate(admin.getId(), JwtService.ROLE_ADMIN), toVO(admin));
+        int tokenVersion = admin.getTokenVersion() == null ? 0 : admin.getTokenVersion();
+        return new AdminTokenVO(jwtService.generateAdmin(admin.getId(), tokenVersion), toVO(admin));
     }
 
     public AdminVO me(Long adminId) {
@@ -52,6 +53,7 @@ public class AdminAuthService {
                 admin.getUsername(),
                 admin.getDisplayName(),
                 admin.getRole(),
-                admin.getStatus());
+                admin.getStatus(),
+                AdminPermissionService.permissionCodes(admin.getRole()));
     }
 }

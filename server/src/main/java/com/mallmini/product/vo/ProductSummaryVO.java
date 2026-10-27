@@ -9,6 +9,7 @@ public record ProductSummaryVO(
         String mainImage,
         BigDecimal minPrice,
         BigDecimal maxPrice,
-        int totalStock
+        int totalStock,
+        int salesCount
 ) {
 }

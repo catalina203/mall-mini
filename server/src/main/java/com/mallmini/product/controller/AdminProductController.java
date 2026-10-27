@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +35,7 @@ public class AdminProductController {
 
     private final AdminProductService adminProductService;
 
+    @PreAuthorize("hasAuthority('PRODUCT_READ')")
     @GetMapping("/products")
     public ApiResponse<PageResult<AdminProductSummaryVO>> page(
             @RequestParam(defaultValue = "1") @Min(1) long page,
@@ -44,17 +46,20 @@ public class AdminProductController {
         return ApiResponse.ok(adminProductService.page(page, pageSize, status, categoryId, keyword));
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_READ')")
     @GetMapping("/products/{id}")
     public ApiResponse<AdminProductDetailVO> detail(@PathVariable Long id) {
         return ApiResponse.ok(adminProductService.detail(id));
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @PostMapping("/products")
     public ApiResponse<AdminProductDetailVO> create(@AuthenticationPrincipal AuthUser authUser,
                                                     @Valid @RequestBody ProductSaveRequest request) {
         return ApiResponse.ok(adminProductService.create(request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @PutMapping("/products/{id}")
     public ApiResponse<AdminProductDetailVO> update(@AuthenticationPrincipal AuthUser authUser,
                                                     @PathVariable Long id,
@@ -62,6 +67,7 @@ public class AdminProductController {
         return ApiResponse.ok(adminProductService.update(id, request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @PatchMapping("/products/{id}/status")
     public ApiResponse<Void> updateStatus(@AuthenticationPrincipal AuthUser authUser,
                                           @PathVariable Long id,
@@ -70,6 +76,7 @@ public class AdminProductController {
         return ApiResponse.ok();
     }
 
+    @PreAuthorize("hasAuthority('STOCK_ADJUST')")
     @PatchMapping("/skus/{skuId}/stock")
     public ApiResponse<Void> updateStock(@AuthenticationPrincipal AuthUser authUser,
                                          @PathVariable Long skuId,
@@ -78,6 +85,7 @@ public class AdminProductController {
         return ApiResponse.ok();
     }
 
+    @PreAuthorize("hasAuthority('PRODUCT_WRITE')")
     @DeleteMapping("/products/{id}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
         adminProductService.delete(id, authUser.id());

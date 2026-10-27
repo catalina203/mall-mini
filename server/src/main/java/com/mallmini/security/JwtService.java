@@ -27,14 +27,24 @@ public class JwtService {
     }
 
     public String generate(Long subjectId, String role) {
+        return build(subjectId, role, null);
+    }
+
+    public String generateAdmin(Long subjectId, int tokenVersion) {
+        return build(subjectId, ROLE_ADMIN, tokenVersion);
+    }
+
+    private String build(Long subjectId, String role, Integer tokenVersion) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(String.valueOf(subjectId))
                 .claim("role", role)
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(expireMinutes * 60)))
-                .signWith(key)
-                .compact();
+                .expiration(Date.from(now.plusSeconds(expireMinutes * 60)));
+        if (tokenVersion != null) {
+            builder.claim("ver", tokenVersion);
+        }
+        return builder.signWith(key).compact();
     }
 
     public Claims parse(String token) throws JwtException {

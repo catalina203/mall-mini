@@ -1,6 +1,7 @@
 package com.mallmini.admin.service;
 
 import com.mallmini.admin.entity.AdminUser;
+import com.mallmini.admin.enums.AdminRole;
 import com.mallmini.admin.enums.AdminStatus;
 import com.mallmini.admin.mapper.AdminUserMapper;
 import com.mallmini.config.AppProperties;
@@ -42,8 +43,9 @@ public class AdminInitializer implements ApplicationRunner {
         admin.setUsername(username == null || username.isBlank() ? "admin" : username.trim());
         admin.setPasswordHash(passwordEncoder.encode(password));
         admin.setDisplayName("管理员");
-        admin.setRole("ADMIN");
+        admin.setRole(AdminRole.SUPER_ADMIN.name());
         admin.setStatus(AdminStatus.ACTIVE.name());
+        admin.setTokenVersion(0);
         adminUserMapper.insert(admin);
         log.info("admin account initialized: {}", admin.getUsername());
     }

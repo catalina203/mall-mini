@@ -14,3 +14,7 @@ export async function getMe(): Promise<AdminProfile> {
   const response = await http.get<ApiResponse<AdminProfile>>('/admin/me')
   return response.data.data
 }
+
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
+  await http.post('/admin/auth/password', { oldPassword, newPassword })
+}

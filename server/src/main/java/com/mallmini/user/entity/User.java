@@ -26,6 +26,12 @@ public class User {
 
     private String status;
 
+    private Integer points;
+
+    private Integer totalPoints;
+
+    private String memberLevel;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

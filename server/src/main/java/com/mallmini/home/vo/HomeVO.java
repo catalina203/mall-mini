@@ -9,6 +9,8 @@ import java.util.List;
 public record HomeVO(
         List<BannerVO> banners,
         List<CategoryVO> categories,
-        List<ProductSummaryVO> recommendedProducts
+        List<ProductSummaryVO> recommendedProducts,
+        List<ProductSummaryVO> newProducts,
+        List<ProductSummaryVO> hotProducts
 ) {
 }

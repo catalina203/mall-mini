@@ -8,6 +8,7 @@ import com.mallmini.common.api.ApiResponse;
 import com.mallmini.security.AuthUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,17 +30,20 @@ public class AdminBannerController {
 
     private final AdminBannerService adminBannerService;
 
+    @PreAuthorize("hasAuthority('BANNER_READ')")
     @GetMapping
     public ApiResponse<List<AdminBannerVO>> list(@RequestParam(required = false) String status) {
         return ApiResponse.ok(adminBannerService.list(status));
     }
 
+    @PreAuthorize("hasAuthority('BANNER_WRITE')")
     @PostMapping
     public ApiResponse<AdminBannerVO> create(@AuthenticationPrincipal AuthUser authUser,
                                              @Valid @RequestBody BannerSaveRequest request) {
         return ApiResponse.ok(adminBannerService.create(request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('BANNER_WRITE')")
     @PutMapping("/{id}")
     public ApiResponse<AdminBannerVO> update(@AuthenticationPrincipal AuthUser authUser,
                                              @PathVariable Long id,
@@ -47,6 +51,7 @@ public class AdminBannerController {
         return ApiResponse.ok(adminBannerService.update(id, request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('BANNER_WRITE')")
     @PatchMapping("/{id}/status")
     public ApiResponse<Void> updateStatus(@AuthenticationPrincipal AuthUser authUser,
                                           @PathVariable Long id,
@@ -55,6 +60,7 @@ public class AdminBannerController {
         return ApiResponse.ok();
     }
 
+    @PreAuthorize("hasAuthority('BANNER_WRITE')")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
         adminBannerService.delete(id, authUser.id());

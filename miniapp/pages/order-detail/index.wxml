@@ -18,6 +18,9 @@
       <text class="status-text">{{detail.statusText}}</text>
       <text class="status-note">{{detail.statusNote}}</text>
       <text class="payment-text">支付状态：{{detail.paymentText}}</text>
+      <text wx:if="{{detail.afterSaleNo}}" class="payment-text">
+        售后：{{detail.afterSaleText}} · {{detail.afterSaleNo}}
+      </text>
       <view wx:if="{{detail.status == 'PENDING_PAYMENT' && paymentConfig}}" class="payment-box">
         <text wx:if="{{paymentConfig.mockEnabled}}" class="payment-hint">
           当前为开发环境模拟支付，不会产生真实扣款。
@@ -46,6 +49,24 @@
           bindtap="confirmReceipt"
           disabled="{{acting}}"
         >确认收货</button>
+        <button
+          wx:if="{{detail.afterSaleNo}}"
+          size="mini"
+          class="action-button"
+          bindtap="openAfterSale"
+        >查看售后</button>
+        <button
+          wx:elif="{{detail.canApplyAfterSale}}"
+          size="mini"
+          class="action-button"
+          bindtap="applyAfterSale"
+        >申请售后</button>
+        <button
+          wx:if="{{detail.canChangeAddress}}"
+          size="mini"
+          class="action-button"
+          bindtap="changeAddress"
+        >修改地址</button>
       </view>
     </view>
 
@@ -69,7 +90,16 @@
             <text class="item-quantity">× {{item.quantity}}</text>
           </view>
         </view>
-        <text class="item-subtotal">{{item.subtotalText}}</text>
+        <view class="item-side">
+          <text class="item-subtotal">{{item.subtotalText}}</text>
+          <text
+            wx:if="{{detail.status == 'COMPLETED' && item.orderItemId}}"
+            class="review-action"
+            data-order-item-id="{{item.orderItemId}}"
+            data-product-name="{{item.productName}}"
+            bindtap="reviewItem"
+          >评价</text>
+        </view>
       </view>
     </view>
 
@@ -91,6 +121,13 @@
         <text>应付金额</text>
         <text class="total-value">{{detail.payableText}}</text>
       </view>
+    </view>
+
+    <view wx:if="{{detail.invoiceRequired}}" class="card">
+      <text class="card-title">发票信息</text>
+      <view class="info-row"><text>发票抬头</text><text>{{detail.invoiceTitle}}</text></view>
+      <view class="info-row"><text>税号</text><text>{{detail.invoiceTaxNo || '个人/无'}}</text></view>
+      <view class="info-row"><text>接收邮箱</text><text>{{detail.invoiceEmail}}</text></view>
     </view>
 
     <view wx:if="{{detail.logisticsNo}}" class="card">

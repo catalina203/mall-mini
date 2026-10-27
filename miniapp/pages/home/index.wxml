@@ -50,6 +50,41 @@
       </view>
     </view>
 
+    <view class="service-grid">
+      <view class="service-item" bindtap="openCoupons">
+        <text class="service-title">领券中心</text>
+        <text class="service-desc">满减 / 折扣</text>
+      </view>
+      <view class="service-item" bindtap="openSupport">
+        <text class="service-title">联系客服</text>
+        <text class="service-desc">工单 / 售后</text>
+      </view>
+      <view class="service-item" bindtap="openMember">
+        <text class="service-title">会员积分</text>
+        <text class="service-desc">积分 / 等级</text>
+      </view>
+    </view>
+
+    <view wx:if="{{home.hotProducts.length}}" class="section-head">
+      <text class="section-title">热销榜单</text>
+      <text class="section-hint">按支付销量</text>
+    </view>
+    <view wx:if="{{home.hotProducts.length}}" class="product-grid">
+      <view wx:for="{{home.hotProducts}}" wx:key="id" class="product-cell">
+        <product-card product="{{item}}" bind:select="openProduct" />
+      </view>
+    </view>
+
+    <view wx:if="{{home.newProducts.length}}" class="section-head">
+      <text class="section-title">新品上架</text>
+      <text class="section-hint">最近上架</text>
+    </view>
+    <view wx:if="{{home.newProducts.length}}" class="product-grid">
+      <view wx:for="{{home.newProducts}}" wx:key="id" class="product-cell">
+        <product-card product="{{item}}" bind:select="openProduct" />
+      </view>
+    </view>
+
     <view class="section-head">
       <text class="section-title">推荐商品</text>
       <text class="section-hint">样例数据</text>

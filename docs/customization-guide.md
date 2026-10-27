@@ -78,10 +78,10 @@ ALTER TABLE product ADD COLUMN brand VARCHAR(64) NOT NULL DEFAULT '' AFTER subti
 1. 新建 `admin/src/api/xxx.ts`，统一通过 `api/request.ts` 发请求。
 2. 新建 `admin/src/types/xxx.ts` 类型。
 3. 新建 `admin/src/views/xxx/XxxView.vue`，使用 Element Plus 表格/表单/分页。
-4. 在 `admin/src/router/index.ts` 添加子路由与 `meta.title`。
-5. 在 `admin/src/layouts/AdminLayout.vue` 添加菜单项。
+4. 在 `admin/src/router/index.ts` 添加子路由、`meta.title` 与 `meta.permission`。
+5. 在 `admin/src/layouts/AdminLayout.vue` 添加菜单项并设置 `permission`；权限码在 `AdminPermissionService` 与 `AdminPermission` 中维护。
 6. 写操作加确认、提交 loading、错误提示；列表处理加载/空/失败态。
-7. 后端实现对应接口并写操作日志。
+7. 后端实现对应接口，用 `@PreAuthorize("hasAuthority('...')")` 校验权限，并写操作日志。
 8. 运行 `pnpm typecheck && pnpm build`。
 
 ## 5. 增加小程序页面
@@ -132,6 +132,8 @@ ALTER TABLE product ADD COLUMN brand VARCHAR(64) NOT NULL DEFAULT '' AFTER subti
 
 ## 8. 配置真实微信登录和支付
 
+> 完整操作步骤、参数清单、回调验签、关单、退款与验收见 [`wechat-integration.md`](./wechat-integration.md)。本节只保留速查。
+
 ### 微信登录
 
 1. 服务端配置 `WECHAT_APP_ID`、`WECHAT_APP_SECRET`（Secret 不得进入小程序或仓库）。
@@ -157,6 +159,8 @@ ALTER TABLE product ADD COLUMN brand VARCHAR(64) NOT NULL DEFAULT '' AFTER subti
 7. 证书与密钥只放服务端安全存储或环境变量。
 
 支付回调涉及外部网络，不应与长事务耦合；建议先落支付记录，再异步/幂等更新订单。
+
+物流轨迹与自动确认收货见 [`logistics-integration.md`](./logistics-integration.md)。
 
 ## 9. 构建并部署
 

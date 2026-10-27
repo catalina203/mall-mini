@@ -14,6 +14,17 @@
   </view>
 
   <block wx:if="{{!searched}}">
+    <view wx:if="{{hot.length}}" class="recent">
+      <view class="section-head">
+        <text class="section-title">热门搜索</text>
+      </view>
+      <view class="chips">
+        <view wx:for="{{hot}}" wx:key="*this" class="chip hot-chip" data-keyword="{{item}}" bindtap="useRecent">
+          {{item}}
+        </view>
+      </view>
+    </view>
+
     <view wx:if="{{recent.length}}" class="recent">
       <view class="section-head">
         <text class="section-title">最近搜索</text>

@@ -32,6 +32,34 @@
       </view>
 
       <view class="card">
+        <view class="coupon-head">
+          <text class="card-title">优惠券</text>
+          <text class="coupon-link" bindtap="goCoupons">领券中心 ›</text>
+        </view>
+        <view wx:if="{{coupons.length}}" class="coupon-list">
+          <view
+            wx:for="{{coupons}}"
+            wx:key="id"
+            class="coupon-chip {{selectedCouponId == item.id ? 'coupon-chip-active' : ''}}"
+            data-id="{{item.id}}"
+            bindtap="selectCoupon"
+          >
+            <text class="coupon-value">{{item.valueText}}</text>
+            <text class="coupon-name">{{item.name}}</text>
+            <text class="coupon-condition">{{item.conditionText}}</text>
+          </view>
+          <view
+            wx:if="{{selectedCouponId}}"
+            class="coupon-chip coupon-chip-clear"
+            bindtap="clearCoupon"
+          >
+            <text class="coupon-name">不使用优惠券</text>
+          </view>
+        </view>
+        <text wx:else class="coupon-empty">暂无可用优惠券</text>
+      </view>
+
+      <view class="card">
         <text class="card-title">商品清单</text>
         <view wx:for="{{preview.items}}" wx:key="skuId" class="item">
           <fallback-image class="thumb" src="{{item.productImage}}" />
@@ -58,7 +86,7 @@
           <text>{{preview.shippingText}}</text>
         </view>
         <view wx:if="{{preview.hasDiscount}}" class="amount-row">
-          <text>优惠</text>
+          <text>{{preview.discountLabel}}</text>
           <text>-{{preview.discountAmountText}}</text>
         </view>
         <view class="amount-row total">
@@ -68,7 +96,43 @@
         <text class="shipping-tip">{{preview.freeShippingText}}</text>
       </view>
 
-      <view class="pay-note">支付功能将在阶段 7 开放，当前下单后订单状态为待付款。</view>
+      <view class="card">
+        <view class="invoice-head">
+          <text class="card-title">发票</text>
+          <switch
+            checked="{{invoiceRequired}}"
+            color="#d9482b"
+            bindchange="onInvoiceToggle"
+          />
+        </view>
+        <text class="invoice-hint">当前仅记录开票信息，电子发票开具需后续接入。</text>
+        <block wx:if="{{invoiceRequired}}">
+          <input
+            class="field"
+            placeholder="发票抬头（个人或单位）"
+            value="{{invoiceTitle}}"
+            maxlength="128"
+            bindinput="onInvoiceTitleInput"
+          />
+          <input
+            class="field"
+            placeholder="税号（个人可不填）"
+            value="{{invoiceTaxNo}}"
+            maxlength="64"
+            bindinput="onInvoiceTaxInput"
+          />
+          <input
+            class="field"
+            placeholder="接收电子发票的邮箱"
+            value="{{invoiceEmail}}"
+            maxlength="128"
+            type="text"
+            bindinput="onInvoiceEmailInput"
+          />
+        </block>
+      </view>
+
+      <view class="pay-note">当前为开发环境模拟支付，下单后仍需在订单详情完成支付。</view>
 
       <view class="submit-bar">
         <view class="submit-total">

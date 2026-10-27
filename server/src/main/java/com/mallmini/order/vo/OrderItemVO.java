@@ -10,6 +10,7 @@ public record OrderItemVO(
         String productImage,
         BigDecimal unitPrice,
         int quantity,
-        BigDecimal subtotal
+        BigDecimal subtotal,
+        Long orderItemId
 ) {
 }

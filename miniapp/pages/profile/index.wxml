@@ -9,6 +9,14 @@
     <text wx:if="{{loggedIn}}" class="logout" bindtap="onLogout">退出</text>
   </view>
 
+  <view wx:if="{{loggedIn && user}}" class="member-bar" bindtap="openMember">
+    <view class="member-left">
+      <text class="member-level">{{user.memberLevelLabel}}</text>
+      <text class="member-points">{{user.points}} 积分</text>
+    </view>
+    <text class="member-link">查看明细 ›</text>
+  </view>
+
   <view wx:if="{{loading}}" class="state">
     <text>正在加载…</text>
   </view>
@@ -32,19 +40,47 @@
   <view class="menu-card">
     <view class="menu-item" bindtap="openOrders">
       <text>我的订单</text>
-      <text class="menu-hint">阶段 5 接入</text>
+      <text class="menu-hint">查看全部</text>
+    </view>
+    <view class="menu-item" bindtap="openAfterSales">
+      <text>售后服务</text>
+      <text class="menu-hint">退款 / 退货</text>
+    </view>
+    <view class="menu-item" bindtap="openNotifications">
+      <text>消息通知</text>
+      <text class="menu-hint">查看</text>
+    </view>
+    <view class="menu-item" bindtap="openMember">
+      <text>会员积分</text>
+      <text class="menu-hint">等级 / 明细</text>
+    </view>
+    <view class="menu-item" bindtap="openCoupons">
+      <text>我的优惠券</text>
+      <text class="menu-hint">领券 / 查看</text>
+    </view>
+    <view class="menu-item" bindtap="openSupport">
+      <text>联系客服</text>
+      <text class="menu-hint">提交工单</text>
+    </view>
+    <view class="menu-item" bindtap="openFavorites">
+      <text>我的收藏</text>
+      <text class="menu-hint">查看</text>
+    </view>
+    <view class="menu-item" bindtap="openHistory">
+      <text>浏览足迹</text>
+      <text class="menu-hint">查看</text>
     </view>
     <view class="menu-item" bindtap="openAddresses">
       <text>收货地址</text>
       <text class="menu-hint">管理</text>
     </view>
-    <view class="menu-item">
+    <view class="menu-item" bindtap="openAgreement" data-type="user">
       <text>用户协议</text>
-      <text class="menu-hint">待补充</text>
+      <text class="menu-hint">查看</text>
     </view>
-    <view class="menu-item">
+    <view class="menu-item" bindtap="openAgreement" data-type="privacy">
       <text>隐私说明</text>
-      <text class="menu-hint">待补充</text>
+      <text class="menu-hint">查看</text>
     </view>
   </view>
 </view>

@@ -8,6 +8,8 @@ public record AdminUserVO(
         String avatarUrl,
         String phone,
         String status,
+        int points,
+        String memberLevel,
         LocalDateTime createdAt
 ) {
 }

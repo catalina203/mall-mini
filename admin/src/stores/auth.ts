@@ -22,6 +22,17 @@ export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem(ADMIN_TOKEN_KEY) ?? '')
   const admin = ref<AdminProfile | null>(readProfile())
   const isAuthenticated = computed(() => token.value.length > 0)
+  const permissions = computed(() => admin.value?.permissions ?? [])
+
+  function can(permission: string): boolean {
+    if (!admin.value) {
+      return false
+    }
+    if (admin.value.role === 'SUPER_ADMIN') {
+      return true
+    }
+    return permissions.value.includes(permission)
+  }
 
   function setSession(value: string, profile: AdminProfile) {
     token.value = value
@@ -42,5 +53,5 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(ADMIN_PROFILE_KEY)
   }
 
-  return { token, admin, isAuthenticated, setSession, setAdmin, clearToken }
+  return { token, admin, isAuthenticated, permissions, can, setSession, setAdmin, clearToken }
 })

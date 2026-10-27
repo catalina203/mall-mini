@@ -4,6 +4,7 @@ import com.mallmini.common.api.ApiResponse;
 import com.mallmini.common.api.PageResult;
 import com.mallmini.common.ratelimit.RateLimitService;
 import com.mallmini.order.dto.CancelOrderRequest;
+import com.mallmini.order.dto.ChangeAddressRequest;
 import com.mallmini.order.dto.CheckoutPreviewRequest;
 import com.mallmini.order.dto.CreateOrderRequest;
 import com.mallmini.order.service.OrderService;
@@ -70,6 +71,13 @@ public class OrderController {
                                              @RequestBody(required = false) CancelOrderRequest request) {
         String reason = request == null ? null : request.reason();
         return ApiResponse.ok(orderService.cancel(authUser.id(), orderNo, reason));
+    }
+
+    @PostMapping("/orders/{orderNo}/address")
+    public ApiResponse<OrderDetailVO> changeAddress(@AuthenticationPrincipal AuthUser authUser,
+                                                    @PathVariable String orderNo,
+                                                    @Valid @RequestBody ChangeAddressRequest request) {
+        return ApiResponse.ok(orderService.changeAddress(authUser.id(), orderNo, request.addressId()));
     }
 
     @PostMapping("/orders/{orderNo}/confirm-receipt")

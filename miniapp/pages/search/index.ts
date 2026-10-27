@@ -1,4 +1,5 @@
 import { listProducts } from '../../services/catalog'
+import { listHotKeywords } from '../../services/search'
 import type { ProductSummary } from '../../types/api'
 import { formatPrice } from '../../utils/format'
 
@@ -15,6 +16,7 @@ Page({
     keyword: '',
     searchedKeyword: '',
     recent: [] as string[],
+    hot: [] as string[],
     products: [] as ProductCardItem[],
     page: 1,
     pageSize: 10,
@@ -28,6 +30,15 @@ Page({
 
   onLoad() {
     this.setData({ recent: this.readRecent() })
+    void this.loadHot()
+  },
+
+  async loadHot() {
+    try {
+      this.setData({ hot: await listHotKeywords(10) })
+    } catch {
+      this.setData({ hot: [] })
+    }
   },
 
   onKeywordInput(event: WechatMiniprogram.Input) {

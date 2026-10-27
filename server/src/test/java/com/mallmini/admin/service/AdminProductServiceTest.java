@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mallmini.category.entity.Category;
 import com.mallmini.category.mapper.CategoryMapper;
 import com.mallmini.common.exception.BusinessException;
+import com.mallmini.inventory.service.StockService;
 import com.mallmini.order.mapper.MallOrderItemMapper;
 import com.mallmini.product.dto.ProductSaveRequest;
 import com.mallmini.product.entity.Product;
@@ -47,6 +48,8 @@ class AdminProductServiceTest {
     private MallOrderItemMapper orderItemMapper;
     @Mock
     private AdminOperationLogger operationLogger;
+    @Mock
+    private StockService stockService;
 
     private AdminProductService adminProductService;
 
@@ -60,7 +63,8 @@ class AdminProductServiceTest {
                 orderItemMapper,
                 new SpecJsonParser(new ObjectMapper()),
                 new ObjectMapper(),
-                operationLogger);
+                operationLogger,
+                stockService);
     }
 
     @Test
@@ -120,6 +124,7 @@ class AdminProductServiceTest {
                 0,
                 status,
                 List.of(),
+                null,
                 List.of(new ProductSaveRequest.SkuSaveItem(
                         null, "SKU-NEW", Map.of("颜色", "黑色"),
                         new BigDecimal("99.00"), 10, skuStatus)));

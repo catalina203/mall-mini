@@ -1,4 +1,5 @@
 import { deleteAddress, listAddresses, setDefaultAddress } from '../../services/address'
+import { changeOrderAddress } from '../../services/order'
 import { isLoggedIn } from '../../store/auth'
 import type { Address } from '../../types/api'
 
@@ -9,6 +10,15 @@ Page({
     error: '',
     addresses: [] as Address[],
     acting: false,
+    selectForOrder: '',
+  },
+
+  onLoad(options: Record<string, string | undefined>) {
+    const selectForOrder = options.selectForOrder ?? ''
+    this.setData({ selectForOrder })
+    if (selectForOrder) {
+      wx.setNavigationBarTitle({ title: '选择收货地址' })
+    }
   },
 
   onShow() {
@@ -31,6 +41,29 @@ Page({
         loading: false,
         error: error instanceof Error ? error.message : '地址加载失败',
       })
+    }
+  },
+
+  async selectAddressForOrder(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.selectForOrder || this.data.acting) {
+      return
+    }
+    const id = Number(event.currentTarget.dataset.id)
+    if (!id) {
+      return
+    }
+    this.setData({ acting: true })
+    try {
+      await changeOrderAddress(this.data.selectForOrder, id)
+      wx.showToast({ title: '地址已更新', icon: 'success' })
+      setTimeout(() => wx.navigateBack(), 300)
+    } catch (error) {
+      wx.showToast({
+        title: error instanceof Error ? error.message : '修改失败',
+        icon: 'none',
+      })
+    } finally {
+      this.setData({ acting: false })
     }
   },
 

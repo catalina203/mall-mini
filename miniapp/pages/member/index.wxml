@@ -1,0 +1,51 @@
+<view class="page member-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看会员积分</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+  <view wx:elif="{{loading}}" class="state"><text>正在加载…</text></view>
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+  <block wx:elif="{{member}}">
+    <view class="member-card">
+      <view class="member-head">
+        <text class="level">{{member.levelLabel}}</text>
+        <text class="points">{{member.points}} <text class="unit">积分</text></text>
+      </view>
+      <view class="progress">
+        <view class="progress-bar" style="width: {{progress}}%"></view>
+      </view>
+      <text class="progress-text" wx:if="{{member.nextLevelPoints}}">
+        累计 {{member.totalPoints}} 分，距 {{member.nextLevelLabel}} 还差 {{member.nextLevelPoints - member.totalPoints}} 分
+      </text>
+      <text class="progress-text" wx:else>已达到最高会员等级</text>
+    </view>
+
+    <view class="rules">
+      <text class="rules-title">积分规则</text>
+      <text>订单完成后按实付金额 1 元 = 1 积分；整单退款会扣回对应积分。</text>
+      <text>会员等级按累计积分计算：银卡 100、金卡 500、钻石 2000。</text>
+    </view>
+
+    <view class="logs-card">
+      <text class="logs-title">积分明细</text>
+      <view wx:for="{{logs}}" wx:key="id" class="log-item">
+        <view class="log-main">
+          <text class="log-type">{{item.typeText}}</text>
+          <text class="log-time">{{item.createdText}}</text>
+          <text class="log-remark">{{item.remark}}</text>
+        </view>
+        <view class="log-right">
+          <text class="delta {{item.pointsDelta > 0 ? 'delta-plus' : 'delta-minus'}}">{{item.deltaText}}</text>
+          <text class="balance">余额 {{item.balanceAfter}}</text>
+        </view>
+      </view>
+      <view wx:if="{{!logs.length}}" class="state">
+        <text>暂无积分记录</text>
+        <text class="state-hint">完成订单后可获得积分</text>
+      </view>
+    </view>
+  </block>
+</view>

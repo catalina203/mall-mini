@@ -11,6 +11,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,6 +35,7 @@ public class AdminCategoryController {
 
     private final AdminCategoryService adminCategoryService;
 
+    @PreAuthorize("hasAuthority('CATEGORY_READ')")
     @GetMapping
     public ApiResponse<PageResult<AdminCategoryVO>> page(
             @RequestParam(defaultValue = "1") @Min(1) long page,
@@ -43,17 +45,20 @@ public class AdminCategoryController {
         return ApiResponse.ok(adminCategoryService.page(page, pageSize, status, keyword));
     }
 
+    @PreAuthorize("hasAuthority('CATEGORY_READ')")
     @GetMapping("/options")
     public ApiResponse<List<AdminCategoryVO>> options() {
         return ApiResponse.ok(adminCategoryService.options());
     }
 
+    @PreAuthorize("hasAuthority('CATEGORY_WRITE')")
     @PostMapping
     public ApiResponse<AdminCategoryVO> create(@AuthenticationPrincipal AuthUser authUser,
                                                @Valid @RequestBody CategorySaveRequest request) {
         return ApiResponse.ok(adminCategoryService.create(request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('CATEGORY_WRITE')")
     @PutMapping("/{id}")
     public ApiResponse<AdminCategoryVO> update(@AuthenticationPrincipal AuthUser authUser,
                                                @PathVariable Long id,
@@ -61,6 +66,7 @@ public class AdminCategoryController {
         return ApiResponse.ok(adminCategoryService.update(id, request, authUser.id()));
     }
 
+    @PreAuthorize("hasAuthority('CATEGORY_WRITE')")
     @PatchMapping("/{id}/status")
     public ApiResponse<Void> updateStatus(@AuthenticationPrincipal AuthUser authUser,
                                           @PathVariable Long id,
@@ -69,6 +75,7 @@ public class AdminCategoryController {
         return ApiResponse.ok();
     }
 
+    @PreAuthorize("hasAuthority('CATEGORY_WRITE')")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@AuthenticationPrincipal AuthUser authUser, @PathVariable Long id) {
         adminCategoryService.delete(id, authUser.id());

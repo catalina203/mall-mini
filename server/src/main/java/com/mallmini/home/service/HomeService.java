@@ -7,6 +7,7 @@ import com.mallmini.banner.mapper.BannerMapper;
 import com.mallmini.banner.vo.BannerVO;
 import com.mallmini.category.service.CategoryService;
 import com.mallmini.home.vo.HomeVO;
+import com.mallmini.product.enums.ProductSort;
 import com.mallmini.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,8 @@ public class HomeService {
 
     private static final int MAX_BANNERS = 10;
     private static final int RECOMMENDED_LIMIT = 8;
+    private static final int NEW_LIMIT = 6;
+    private static final int HOT_LIMIT = 6;
 
     private final BannerMapper bannerMapper;
     private final CategoryService categoryService;
@@ -42,6 +45,10 @@ public class HomeService {
         return new HomeVO(
                 bannerVOs,
                 categoryService.listEnabledTree(),
-                productService.recommended(RECOMMENDED_LIMIT));
+                productService.recommended(RECOMMENDED_LIMIT),
+                productService.listOnSale(1, NEW_LIMIT, null, null,
+                        ProductSort.NEW.value(), null, null).items(),
+                productService.listOnSale(1, HOT_LIMIT, null, null,
+                        ProductSort.SALES.value(), null, null).items());
     }
 }

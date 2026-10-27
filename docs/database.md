@@ -32,6 +32,22 @@
 | 12 | `payment_record` | 支付记录 |
 | 13 | `banner` | 轮播图 |
 | 14 | `admin_operation_log` | 管理员操作审计 |
+| 15 | `after_sale_order` | 售后单 |
+| 16 | `after_sale_item` | 售后明细 |
+| 17 | `after_sale_log` | 售后状态日志 |
+| 18 | `refund_record` | 退款记录 |
+| 19 | `stock_log` | 库存流水 |
+| 20 | `notification_log` | 站内通知记录 |
+| 21 | `shipping_template` | 运费模板 |
+| 22 | `shipping_template_rule` | 运费区域规则 |
+| 23 | `coupon_template` | 优惠券模板 |
+| 24 | `coupon` | 用户优惠券 |
+| 25 | `product_review` | 商品评价 |
+| 26 | `favorite` | 商品收藏 |
+| 27 | `browse_history` | 浏览足迹 |
+| 28 | `points_log` | 积分流水 |
+| 29 | `search_keyword` | 搜索热词 |
+| 30 | `support_ticket` | 客服工单 |
 
 ---
 
@@ -46,6 +62,9 @@
 | avatar_url | VARCHAR(512) | NOT NULL DEFAULT '' | |
 | phone | VARCHAR(20) | NULL | 敏感，管理端脱敏展示 |
 | status | VARCHAR(20) | NOT NULL DEFAULT 'ACTIVE' | ACTIVE / DISABLED |
+| points | INT | NOT NULL DEFAULT 0 | 当前积分余额 |
+| total_points | INT | NOT NULL DEFAULT 0 | 累计获得积分，用于会员等级 |
+| member_level | VARCHAR(20) | NOT NULL DEFAULT 'NORMAL' | NORMAL / SILVER / GOLD / PLATINUM |
 | created_at | DATETIME(3) | NOT NULL | |
 | updated_at | DATETIME(3) | NOT NULL | |
 
@@ -59,8 +78,9 @@
 | username | VARCHAR(64) | NOT NULL, UNIQUE | |
 | password_hash | VARCHAR(100) | NOT NULL | BCrypt |
 | display_name | VARCHAR(64) | NOT NULL DEFAULT '' | |
-| role | VARCHAR(32) | NOT NULL DEFAULT 'ADMIN' | 预留角色 |
+| role | VARCHAR(32) | NOT NULL DEFAULT 'SUPER_ADMIN' | `SUPER_ADMIN / OPERATOR / CUSTOMER_SERVICE / WAREHOUSE` |
 | status | VARCHAR(20) | NOT NULL DEFAULT 'ACTIVE' | ACTIVE / DISABLED |
+| token_version | INT | NOT NULL DEFAULT 0 | 改密/禁用/改角色时递增，使旧 JWT 失效 |
 | last_login_at | DATETIME(3) | NULL | |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
@@ -96,6 +116,8 @@
 | main_image | VARCHAR(512) | NOT NULL DEFAULT '' | |
 | status | VARCHAR(20) | NOT NULL DEFAULT 'OFF_SALE' | ON_SALE / OFF_SALE |
 | sort_order | INT | NOT NULL DEFAULT 0 | |
+| shipping_template_id | BIGINT UNSIGNED | NULL | 运费模板，空使用全局配置 |
+| sales_count | INT | NOT NULL DEFAULT 0 | 累计销量（按已支付件数） |
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
 索引：`idx_product_category_status (category_id, status)`，`idx_product_status_sort (status, sort_order)`，`idx_product_name (name)`（关键词前缀/全文检索首版用 LIKE，后续可替换）。
@@ -171,7 +193,7 @@
 | order_no | VARCHAR(32) | NOT NULL, UNIQUE | 服务端生成 |
 | user_id | BIGINT UNSIGNED | NOT NULL | |
 | status | VARCHAR(32) | NOT NULL | 订单状态 |
-| payment_status | VARCHAR(20) | NOT NULL DEFAULT 'UNPAID' | UNPAID / PAID / REFUNDED |
+| payment_status | VARCHAR(20) | NOT NULL DEFAULT 'UNPAID' | UNPAID / PAID / PARTIALLY_REFUNDED / REFUNDED |
 | goods_amount | DECIMAL(10,2) | NOT NULL | 商品金额 |
 | discount_amount | DECIMAL(10,2) | NOT NULL DEFAULT 0.00 | 首版 0 |
 | shipping_fee | DECIMAL(10,2) | NOT NULL DEFAULT 0.00 | 服务端计算 |
@@ -184,6 +206,13 @@
 | receiver_detail | VARCHAR(255) | NOT NULL | |
 | client_request_no | VARCHAR(64) | NOT NULL | 幂等键 |
 | remark | VARCHAR(255) | NOT NULL DEFAULT '' | 用户备注 |
+| coupon_id | BIGINT UNSIGNED | NULL | 使用的优惠券 |
+| coupon_name | VARCHAR(64) | NOT NULL DEFAULT '' | 优惠券名称快照 |
+| admin_remark | VARCHAR(255) | NOT NULL DEFAULT '' | 仅后台可见的内部备注 |
+| invoice_required | TINYINT(1) | NOT NULL DEFAULT 0 | 是否需要发票 |
+| invoice_title | VARCHAR(128) | NOT NULL DEFAULT '' | 发票抬头 |
+| invoice_tax_no | VARCHAR(64) | NOT NULL DEFAULT '' | 税号 |
+| invoice_email | VARCHAR(128) | NOT NULL DEFAULT '' | 电子发票邮箱 |
 | logistics_company | VARCHAR(64) | NULL | |
 | logistics_no | VARCHAR(64) | NULL | |
 | paid_at / shipped_at / completed_at / cancelled_at | DATETIME(3) | NULL | |
@@ -191,7 +220,8 @@
 | created_at / updated_at | DATETIME(3) | NOT NULL | |
 
 索引：`uk_order_no (order_no)`，`uk_order_user_request (user_id, client_request_no)`，
-`idx_order_user_status_created (user_id, status, created_at)`，`idx_order_status_created (status, created_at)`。
+`idx_order_user_status_created (user_id, status, created_at)`，`idx_order_status_created (status, created_at)`，
+`idx_order_status_shipped (status, shipped_at)`，`idx_order_paid_at (paid_at)`。
 
 ### 2.10 `mall_order_item`
 
@@ -276,13 +306,126 @@
 
 索引：`idx_admin_log_admin_created (admin_id, created_at)`。
 
+
+### 2.15 `after_sale_order`
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | BIGINT UNSIGNED | PK | |
+| after_sale_no | VARCHAR(32) | NOT NULL, UNIQUE | 售后单号，`AS` + 雪花 ID |
+| order_id / order_no | BIGINT UNSIGNED / VARCHAR(32) | NOT NULL | 关联订单 |
+| user_id | BIGINT UNSIGNED | NOT NULL | 申请人 |
+| type | VARCHAR(20) | NOT NULL | `REFUND_ONLY / RETURN_REFUND` |
+| status | VARCHAR(32) | NOT NULL | 见下方状态枚举 |
+| reason / description | VARCHAR(255) / VARCHAR(1000) | NOT NULL | 申请原因与补充说明 |
+| refund_amount | DECIMAL(10,2) | NOT NULL, ≥0 | 服务端计算，不信任客户端 |
+| return_company / return_tracking_no | VARCHAR(64) | NULL | 退货物流 |
+| review_remark / reviewed_by / reviewed_at | | NULL | 审核信息 |
+| returned_at / refunded_at / closed_at | DATETIME(3) | NULL | 关键时间 |
+| created_at / updated_at | DATETIME(3) | NOT NULL | |
+
+索引：`uk_after_sale_no`、`idx_after_sale_user_created`、`idx_after_sale_order`、`idx_after_sale_status_created`。
+
+### 2.16 `after_sale_item`
+
+售后商品快照与退款金额。字段包含 `after_sale_id`、`order_item_id`、`product_id`、`sku_id`、商品名/规格/图片、`unit_price`、`quantity`、`refund_amount`。
+唯一索引 `uk_after_sale_item (after_sale_id, order_item_id)`，防止同一明细重复。
+
+### 2.17 `after_sale_log`
+
+售后状态变更日志：`after_sale_id`、`from_status`、`to_status`、`operator_type`、`operator_id`、`remark`、`created_at`。
+
+### 2.18 `refund_record`
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | BIGINT UNSIGNED | PK | |
+| refund_no | VARCHAR(32) | NOT NULL, UNIQUE | 退款单号，`RF` + 雪花 ID |
+| after_sale_id | BIGINT UNSIGNED | NOT NULL, UNIQUE | 一个售后单对应一条退款记录 |
+| order_id / order_no | | NOT NULL | 关联订单 |
+| channel | VARCHAR(20) | NOT NULL | `MOCK / WECHAT / MANUAL` |
+| amount | DECIMAL(10,2) | NOT NULL, ≥0 | 退款金额 |
+| status | VARCHAR(20) | NOT NULL | `PENDING / SUCCESS / FAILED` |
+| transaction_no | VARCHAR(64) | NULL | 渠道退款单号或线下凭证号 |
+| requested_at / success_at | DATETIME(3) | | 发起/成功时间 |
+| failed_reason | VARCHAR(255) | NULL | 失败原因 |
+
+### 2.19 `stock_log`
+
+| 字段 | 类型 | 约束 | 说明 |
+| --- | --- | --- | --- |
+| id | BIGINT UNSIGNED | PK | |
+| sku_id / product_id | BIGINT UNSIGNED | NOT NULL | 关联 SKU/商品 |
+| change_type | VARCHAR(32) | NOT NULL | 见库存变动类型 |
+| quantity_delta | INT | NOT NULL | 正数入库，负数出库 |
+| stock_before / stock_after | INT | NOT NULL, ≥0 | 变动前后库存 |
+| biz_type / biz_no | VARCHAR(32) / VARCHAR(64) | NOT NULL | 业务类型与单号 |
+| operator_type / operator_id | | | USER / ADMIN / SYSTEM |
+| remark | VARCHAR(255) | NOT NULL DEFAULT '' | |
+| created_at | DATETIME(3) | NOT NULL | |
+
+唯一索引 `uk_stock_log_biz (change_type, biz_no, sku_id)`，用于回补幂等兜底；普通索引覆盖 SKU 时间线与业务单号查询。
+
+### 2.20 `notification_log`
+
+站内通知记录：`channel`（`IN_APP / MINIPROGRAM / SMS`）、`recipient_type`（`USER / ADMIN`）、`recipient_id`、`template_code`、`title`、`content`、`biz_type`、`biz_no`、`payload_json`、`status`（`PENDING / SENT / FAILED / SKIPPED`）、`retry_count`、`read_at`、`sent_at`、`error_message`、时间字段。
+
+> 当前实现只写入 `IN_APP` 并标记 `SENT`，用户可通过 `/api/v1/me/notifications` 读取；微信订阅消息与短信渠道尚未接入。
+
+
+### 2.21 `shipping_template` / `shipping_template_rule`
+
+- `shipping_template`：`name`、`default_fee`、`free_threshold`、`status`。
+- `shipping_template_rule`：`template_id`、`region_code`（空=全国）、`first_unit/first_fee`、`additional_unit/additional_fee`、`free_threshold`、`status`、`sort_order`。
+- 商品通过 `product.shipping_template_id` 绑定；未绑定使用全局 `APP_SHIPPING_FEE` / `APP_SHIPPING_FREE_THRESHOLD`。
+- V4 初始化默认模板（id=1）并把历史商品绑定到该模板。
+
+### 2.22 `coupon_template` / `coupon`
+
+- `coupon_template`：`name`、`type(FIXED/PERCENT)`、`value`、`min_amount`、`scope(ALL/CATEGORY/PRODUCT)`、`scope_id`、`total_count`、`claimed_count`、`per_user_limit`、有效期、状态。
+- `coupon`：`coupon_no`、`template_id`、`user_id`、`status(UNUSED/USED/EXPIRED)`、`order_no`、`used_at`、有效期。
+- 首版每人每模板限领 1 张（唯一索引 `uk_coupon_template_user`）；`FIXED` 为减免金额，`PERCENT` 为减免百分比。
+
+### 2.23 `product_review`
+
+`order_no`、`order_item_id`（唯一，一单一明细一条评价）、`product_id`、`sku_id`、`user_id`、`rating(1-5)`、`content`、`anonymous`、`status(PENDING/APPROVED/REJECTED)`、`reply`、时间字段。公开列表只返回 `APPROVED`。
+
+### 2.24 `favorite` / `browse_history`
+
+- `favorite`：`user_id + product_id` 唯一，记录收藏时间。
+- `browse_history`：`user_id + product_id` 唯一，重复浏览更新 `viewed_at`；可清空。
+
+
+### 2.28 `points_log`
+
+积分流水：`user_id`、`change_type(ORDER_REWARD/ORDER_REFUND_REVOKE/ADMIN_ADJUST)`、`points_delta`、`balance_after`、`biz_type/biz_no`、`remark`、`created_at`。
+唯一索引 `uk_points_biz (change_type, biz_no, user_id)` 保证订单奖励/退款扣回幂等。
+
+### 2.29 `search_keyword`
+
+搜索热词：`keyword` 唯一、`search_count`、`last_searched_at`。商品搜索第一页会累加计数，用于热门搜索与运营观察。
+
+### 2.30 `support_ticket`
+
+客服工单：`ticket_no` 唯一、`user_id`、`order_no`、`type(ORDER/PRODUCT/REFUND/OTHER)`、`subject`、`content`、`status(OPEN/PROCESSING/RESOLVED/CLOSED)`、`reply`、`replied_by/replied_at`、`closed_at`、时间字段。
+
 ## 3. 状态枚举
 
 - 用户：`ACTIVE / DISABLED`
+- 管理员角色：`SUPER_ADMIN / OPERATOR / CUSTOMER_SERVICE / WAREHOUSE`；状态：`ACTIVE / DISABLED`
 - 分类/轮播图/商品：`ENABLED / DISABLED`、`ON_SALE / OFF_SALE`
 - SKU：`ENABLED / DISABLED`
 - 订单：`PENDING_PAYMENT / PENDING_SHIPMENT / PENDING_RECEIPT / COMPLETED / CANCELLED`
-- 支付：`UNPAID / PAID / REFUNDED`；支付记录：`PENDING / SUCCESS / FAILED / REFUNDED`
+- 支付：`UNPAID / PAID / PARTIALLY_REFUNDED / REFUNDED`；支付记录：`PENDING / SUCCESS / FAILED / REFUNDED`
+- 售后类型：`REFUND_ONLY / RETURN_REFUND`
+- 售后状态：`APPLIED / APPROVED / WAIT_RETURN / RETURNED / RETURN_RECEIVED / REFUNDING / REFUNDED / REFUND_FAILED / REJECTED / CANCELLED`
+- 退款记录：`PENDING / SUCCESS / FAILED`；退款渠道：`MOCK / WECHAT / MANUAL`
+- 库存变动：`ORDER_DEDUCT / ORDER_CANCEL_RESTORE / AFTER_SALE_RESTORE / MANUAL_ADJUST / PRODUCT_INIT / STOCKTAKE`
+- 通知：`IN_APP / MINIPROGRAM / SMS`，状态 `PENDING / SENT / FAILED / SKIPPED`
+- 优惠券：类型 `FIXED / PERCENT`，范围 `ALL / CATEGORY / PRODUCT`，状态 `UNUSED / USED / EXPIRED`；模板状态 `ENABLED / DISABLED`
+- 评价：`PENDING / APPROVED / REJECTED`
+- 会员等级：`NORMAL / SILVER / GOLD / PLATINUM`；积分变动：`ORDER_REWARD / ORDER_REFUND_REVOKE / ADMIN_ADJUST`
+- 客服工单：`OPEN / PROCESSING / RESOLVED / CLOSED`
 - 轮播跳转：`NONE / PRODUCT / CATEGORY`
 
 ## 4. 演示数据（dev）
@@ -300,9 +443,13 @@
 - `V{n}__description.sql` 只增不改；已发布脚本禁止修改。
 - 结构变更必须同时提供回滚说明（人工）与向后兼容评估。
 - 空库执行：`mvn -pl server flyway:migrate` 或应用启动自动迁移（dev）。
+- `V2__after_sale_stock_notification.sql` 新增售后、退款、库存流水、通知表，可在已有 V1 库上增量执行。
+- `V3__r2_admin_order.sql` 增加管理员 token 版本、角色迁移、订单发票/后台备注与 R2 查询索引，可在已有 V2 库上增量执行。
+- `V4__r3_coupon_shipping_review_favorite.sql` 新增优惠券、运费模板、评价、收藏/足迹，并初始化默认运费模板，可在已有 V3 库上增量执行。
+- `V5__r4_search_support_member_home.sql` 增加积分、搜索热词、客服工单、商品销量与全文索引（ngram），可在已有 V4 库上增量执行。
 - 生产关闭 `spring.flyway.clean-disabled=false` 的风险配置，保持 `clean-disabled=true`。
 - 索引新增使用 `CREATE INDEX` 的独立版本脚本，避免大表锁定时段不可控。
 
 ## 6. 待评估扩展表
 
-优惠券、收藏、评价、售后、退款、库存流水、消息通知。首版不建表，避免空壳字段。
+优惠券、收藏、评价、会员积分、消息模板配置。售后、退款、库存流水、站内通知已在 V2 落地；微信订阅消息与短信发送渠道仍待接入。

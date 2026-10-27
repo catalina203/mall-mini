@@ -1,0 +1,33 @@
+<view class="page list-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看浏览足迹</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+  <view wx:elif="{{loading}}" class="state"><text>正在加载…</text></view>
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load" data-reset="true">重试</button>
+  </view>
+  <block wx:else>
+    <view wx:if="{{items.length}}" class="top-bar">
+      <text>共 {{total}} 条记录</text>
+      <text class="clear" bindtap="clear">清空</text>
+    </view>
+    <view wx:if="{{items.length}}" class="list">
+      <view wx:for="{{items}}" wx:key="productId" class="item-card" data-id="{{item.productId}}" bindtap="openProduct">
+        <fallback-image class="thumb" src="{{item.mainImage}}" />
+        <view class="item-info">
+          <text class="name">{{item.name}}</text>
+          <text class="subtitle">{{item.subtitle}}</text>
+          <text class="price">{{item.priceText}}</text>
+          <text class="time">浏览于 {{item.atText}}</text>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{items.length}}" class="footer">{{hasMore ? '上拉加载更多' : '没有更多了'}}</view>
+    <view wx:else class="state">
+      <text>暂无浏览足迹</text>
+      <text class="state-hint">浏览商品后会记录在这里</text>
+    </view>
+  </block>
+</view>

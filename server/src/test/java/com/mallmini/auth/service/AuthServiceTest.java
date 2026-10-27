@@ -60,7 +60,7 @@ class AuthServiceTest {
 
     @Test
     void createsUserAndReturnsToken() {
-        UserVO userVO = new UserVO(1L, "开发用户", "", "", "ACTIVE");
+        UserVO userVO = new UserVO(1L, "开发用户", "", "", "ACTIVE", 0, "NORMAL", "普通会员");
         when(userMapper.selectOne(any())).thenReturn(null);
         when(userMapper.insert(any(User.class))).thenAnswer(invocation -> {
             User user = invocation.getArgument(0);
@@ -85,7 +85,7 @@ class AuthServiceTest {
         user.setStatus("ACTIVE");
         when(userMapper.selectOne(any())).thenReturn(user);
         when(jwtService.generate(9L, JwtService.ROLE_USER)).thenReturn("token-9");
-        when(userService.toVO(user)).thenReturn(new UserVO(9L, "老用户", "", "", "ACTIVE"));
+        when(userService.toVO(user)).thenReturn(new UserVO(9L, "老用户", "", "", "ACTIVE", 0, "NORMAL", "普通会员"));
 
         AuthTokenVO result = authService.devLogin(new DevLoginRequest("dev-9", "新昵称"));
 

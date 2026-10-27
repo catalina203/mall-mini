@@ -13,6 +13,15 @@ import java.util.List;
 @Mapper
 public interface ProductMapper extends BaseMapper<Product> {
 
+    @org.apache.ibatis.annotations.Update("""
+            UPDATE product
+               SET sales_count = sales_count + #{quantity},
+                   updated_at = NOW(3)
+             WHERE id = #{productId}
+            """)
+    int incrementSales(@org.apache.ibatis.annotations.Param("productId") Long productId,
+                       @org.apache.ibatis.annotations.Param("quantity") int quantity);
+
     IPage<Product> selectOnSalePage(Page<Product> page,
                                     @Param("categoryIds") List<Long> categoryIds,
                                     @Param("keyword") String keyword,

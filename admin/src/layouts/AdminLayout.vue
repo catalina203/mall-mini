@@ -1,19 +1,29 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
+  Bell,
+  Box,
+  ChatDotRound,
   DataBoard,
+  Discount,
+  Document,
   Fold,
   Expand,
   Goods,
   FolderOpened,
+  Lock,
   Picture,
+  RefreshLeft,
+  Service,
+  Setting,
   SwitchButton,
   Tickets,
   User,
+  Van,
 } from '@element-plus/icons-vue'
-import { getMe } from '@/api/auth'
+import { changePassword, getMe } from '@/api/auth'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -24,29 +34,106 @@ const menuOpen = ref(false)
 const navGroups = [
   {
     label: '总览',
-    items: [{ path: '/dashboard', label: '仪表盘', icon: DataBoard }],
+    items: [{ path: '/dashboard', label: '仪表盘', icon: DataBoard, permission: 'DASHBOARD_READ' }],
   },
   {
     label: '商品运营',
     items: [
-      { path: '/products', label: '商品管理', icon: Goods },
-      { path: '/categories', label: '分类管理', icon: FolderOpened },
-      { path: '/banners', label: '轮播图管理', icon: Picture },
+      { path: '/products', label: '商品管理', icon: Goods, permission: 'PRODUCT_READ' },
+      { path: '/categories', label: '分类管理', icon: FolderOpened, permission: 'CATEGORY_READ' },
+      { path: '/banners', label: '轮播图管理', icon: Picture, permission: 'BANNER_READ' },
+      { path: '/stock', label: '库存中心', icon: Box, permission: 'STOCK_READ' },
+      { path: '/shipping', label: '运费模板', icon: Van, permission: 'PRODUCT_READ' },
     ],
   },
   {
     label: '交易与用户',
     items: [
-      { path: '/orders', label: '订单管理', icon: Tickets },
-      { path: '/users', label: '用户管理', icon: User },
+      { path: '/orders', label: '订单管理', icon: Tickets, permission: 'ORDER_READ' },
+      { path: '/after-sales', label: '售后管理', icon: RefreshLeft, permission: 'AFTER_SALE_READ' },
+      { path: '/users', label: '用户管理', icon: User, permission: 'USER_READ' },
+      { path: '/support', label: '客服工单', icon: Service, permission: 'SUPPORT_READ' },
+      { path: '/notifications', label: '通知记录', icon: Bell, permission: 'NOTIFICATION_READ' },
+    ],
+  },
+  {
+    label: '营销与内容',
+    items: [
+      { path: '/coupons', label: '优惠券', icon: Discount, permission: 'COUPON_READ' },
+      { path: '/reviews', label: '评价管理', icon: ChatDotRound, permission: 'REVIEW_READ' },
+    ],
+  },
+  {
+    label: '系统',
+    items: [
+      { path: '/admins', label: '管理员管理', icon: Setting, permission: 'ADMIN_MANAGE' },
+      { path: '/operation-logs', label: '操作日志', icon: Document, permission: 'AUDIT_READ' },
     ],
   },
 ]
+
+const visibleNavGroups = computed(() =>
+  navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => auth.can(item.permission)),
+    }))
+    .filter((group) => group.items.length > 0),
+)
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: '超级管理员',
+  OPERATOR: '运营',
+  CUSTOMER_SERVICE: '客服',
+  WAREHOUSE: '仓储',
+}
 
 const displayName = computed(
   () => auth.admin?.displayName || auth.admin?.username || '管理员',
 )
 const initials = computed(() => displayName.value.slice(0, 1).toUpperCase())
+const roleLabel = computed(() => ROLE_LABELS[auth.admin?.role ?? ''] ?? '管理员')
+
+const passwordVisible = ref(false)
+const passwordSaving = ref(false)
+const passwordForm = reactive({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+
+function openPassword() {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordVisible.value = true
+}
+
+async function submitPassword() {
+  if (passwordSaving.value) {
+    return
+  }
+  if (!passwordForm.oldPassword || passwordForm.newPassword.length < 8) {
+    ElMessage.warning('请输入原密码，新密码至少 8 位')
+    return
+  }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    ElMessage.warning('两次输入的新密码不一致')
+    return
+  }
+  passwordSaving.value = true
+  try {
+    await changePassword(passwordForm.oldPassword, passwordForm.newPassword)
+    ElMessage.success('密码已修改，请重新登录')
+    passwordVisible.value = false
+    auth.clearToken()
+    router.replace('/login')
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : '修改密码失败')
+  } finally {
+    passwordSaving.value = false
+  }
+}
 const today = new Intl.DateTimeFormat('zh-CN', {
   month: 'long',
   day: 'numeric',
@@ -76,10 +163,11 @@ async function logout() {
 }
 
 onMounted(async () => {
-  if (!auth.token || auth.admin) {
+  if (!auth.token) {
     return
   }
   try {
+    // 每次进入后台都刷新一次 profile，兼容旧缓存并同步最新权限
     auth.setAdmin(await getMe())
   } catch {
     auth.clearToken()
@@ -100,7 +188,7 @@ onMounted(async () => {
       </div>
 
       <nav class="nav">
-        <div v-for="group in navGroups" :key="group.label" class="nav-group">
+        <div v-for="group in visibleNavGroups" :key="group.label" class="nav-group">
           <p class="nav-label">{{ group.label }}</p>
           <router-link
             v-for="item in group.items"
@@ -121,8 +209,11 @@ onMounted(async () => {
           <div class="avatar">{{ initials }}</div>
           <div class="user-info">
             <strong>{{ displayName }}</strong>
-            <span>店铺管理员</span>
+            <span>{{ roleLabel }}</span>
           </div>
+          <button class="icon-button" title="修改密码" @click="openPassword">
+            <el-icon><Lock /></el-icon>
+          </button>
           <button class="icon-button" title="退出登录" @click="logout">
             <el-icon><SwitchButton /></el-icon>
           </button>
@@ -160,6 +251,32 @@ onMounted(async () => {
         </router-view>
       </main>
     </div>
+
+    <el-dialog v-model="passwordVisible" title="修改密码" width="420px">
+      <el-form label-position="top">
+        <el-form-item label="原密码" required>
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password />
+        </el-form-item>
+        <el-form-item label="新密码" required>
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            show-password
+            placeholder="至少 8 位"
+          />
+        </el-form-item>
+        <el-form-item label="确认新密码" required>
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password />
+        </el-form-item>
+      </el-form>
+      <p class="password-tip">修改成功后当前登录会失效，需要使用新密码重新登录。</p>
+      <template #footer>
+        <el-button @click="passwordVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordSaving" @click="submitPassword">
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -534,5 +651,14 @@ onMounted(async () => {
   .content {
     padding: 16px 14px 36px;
   }
+}
+</style>
+
+<style scoped>
+.password-tip {
+  margin: 0;
+  color: var(--mall-muted);
+  font-size: 11px;
+  line-height: 1.6;
 }
 </style>

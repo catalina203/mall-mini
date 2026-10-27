@@ -38,7 +38,7 @@ class AdminAuthServiceTest {
         AdminUser admin = admin("ACTIVE", "hash");
         when(adminUserMapper.selectOne(any())).thenReturn(admin);
         when(passwordEncoder.matches("secret", "hash")).thenReturn(true);
-        when(jwtService.generate(1L, JwtService.ROLE_ADMIN)).thenReturn("admin-token");
+        when(jwtService.generateAdmin(1L, 0)).thenReturn("admin-token");
 
         AdminTokenVO result = adminAuthService.login(new AdminLoginRequest("admin", "secret"));
 
@@ -56,7 +56,7 @@ class AdminAuthServiceTest {
         assertThatThrownBy(() -> adminAuthService.login(new AdminLoginRequest("admin", "wrong")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("用户名或密码错误");
-        verify(jwtService, never()).generate(any(), any());
+        verify(jwtService, never()).generateAdmin(any(), any(Integer.class));
     }
 
     @Test
@@ -75,7 +75,8 @@ class AdminAuthServiceTest {
         admin.setUsername("admin");
         admin.setDisplayName("管理员");
         admin.setPasswordHash(passwordHash);
-        admin.setRole("ADMIN");
+        admin.setRole("SUPER_ADMIN");
+        admin.setTokenVersion(0);
         admin.setStatus(status);
         return admin;
     }

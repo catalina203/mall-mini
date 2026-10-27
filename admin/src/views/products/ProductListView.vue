@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox, type UploadRequestOptions } from 'element-plus
 import { Plus, Refresh, Search, Upload } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import { fetchCategoryOptions } from '@/api/categories'
+import { fetchShippingOptions } from '@/api/shipping'
 import {
   createProduct,
   deleteProduct,
@@ -34,6 +35,7 @@ interface ProductForm {
   mainImage: string
   sortOrder: number
   status: string
+  shippingTemplateId: number | null
   imagesText: string
   skus: SkuRow[]
 }
@@ -47,6 +49,7 @@ function emptyForm(): ProductForm {
     mainImage: '',
     sortOrder: 0,
     status: 'OFF_SALE',
+    shippingTemplateId: null,
     imagesText: '',
     skus: [{ skuCode: '', specText: '', price: 0, stock: 0, status: 'ENABLED' }],
   }
@@ -59,6 +62,7 @@ const uploading = ref(false)
 const error = ref('')
 const items = ref<AdminProductSummary[]>([])
 const categories = ref<AdminCategory[]>([])
+const shippingTemplates = ref<Array<{ id: number; name: string }>>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = ref(10)
@@ -132,6 +136,7 @@ async function openEdit(row: AdminProductSummary) {
       mainImage: detail.mainImage,
       sortOrder: detail.sortOrder,
       status: detail.status,
+      shippingTemplateId: detail.shippingTemplateId ?? null,
       imagesText: detail.images.map((image) => image.url).join('\n'),
       skus: detail.skus.map((sku) => ({
         id: sku.id,
@@ -220,6 +225,7 @@ function buildPayload(): ProductPayload {
     mainImage: form.mainImage.trim(),
     sortOrder: form.sortOrder,
     status: form.status,
+    shippingTemplateId: form.shippingTemplateId ?? undefined,
     images,
     skus,
   }
@@ -306,7 +312,14 @@ function changePage(value: number) {
   void load()
 }
 
-onMounted(load)
+onMounted(async () => {
+  void load()
+  try {
+    shippingTemplates.value = await fetchShippingOptions()
+  } catch {
+    shippingTemplates.value = []
+  }
+})
 </script>
 
 <template>
@@ -459,6 +472,16 @@ onMounted(load)
                 </el-form-item>
               </el-col>
             </el-row>
+            <el-form-item label="运费模板">
+              <el-select v-model="form.shippingTemplateId" clearable placeholder="未绑定则使用全局运费配置" class="full">
+                <el-option
+                  v-for="template in shippingTemplates"
+                  :key="template.id"
+                  :label="template.name"
+                  :value="template.id"
+                />
+              </el-select>
+            </el-form-item>
             <el-form-item label="副标题">
               <el-input v-model="form.subtitle" maxlength="255" placeholder="一句话卖点，可选" />
             </el-form-item>

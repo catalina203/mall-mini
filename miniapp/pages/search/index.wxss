@@ -111,3 +111,9 @@
   font-size: 24rpx;
   text-align: center;
 }
+
+
+.hot-chip {
+  color: #d9482b;
+  background: #fdf2ee;
+}

@@ -6,6 +6,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.mallmini.address.entity.UserAddress;
 import com.mallmini.address.service.AddressService;
 import com.mallmini.admin.service.AdminOperationLogger;
+import com.mallmini.aftersale.entity.AfterSaleOrder;
+import com.mallmini.aftersale.enums.AfterSaleStatus;
+import com.mallmini.aftersale.mapper.AfterSaleOrderMapper;
 import com.mallmini.cart.entity.CartItem;
 import com.mallmini.cart.mapper.CartItemMapper;
 import com.mallmini.category.service.CategoryService;
@@ -14,6 +17,11 @@ import com.mallmini.common.exception.BusinessException;
 import com.mallmini.common.exception.ErrorCode;
 import com.mallmini.common.util.MaskUtils;
 import com.mallmini.config.AppProperties;
+import com.mallmini.coupon.service.CouponService;
+import com.mallmini.inventory.enums.StockChangeType;
+import com.mallmini.inventory.service.StockService;
+import com.mallmini.member.service.PointsService;
+import com.mallmini.notification.service.NotificationService;
 import com.mallmini.order.dto.CheckoutPreviewRequest;
 import com.mallmini.order.dto.CreateOrderRequest;
 import com.mallmini.order.entity.MallOrder;
@@ -40,6 +48,7 @@ import com.mallmini.product.enums.SkuStatus;
 import com.mallmini.product.mapper.ProductMapper;
 import com.mallmini.product.mapper.ProductSkuMapper;
 import com.mallmini.product.service.SpecJsonParser;
+import com.mallmini.shipping.service.ShippingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -68,6 +77,7 @@ public class OrderService {
     private final MallOrderItemMapper orderItemMapper;
     private final OrderStatusLogMapper statusLogMapper;
     private final ProductSkuMapper productSkuMapper;
+    private final StockService stockService;
     private final ProductMapper productMapper;
     private final CategoryService categoryService;
     private final AddressService addressService;
@@ -75,6 +85,11 @@ public class OrderService {
     private final SpecJsonParser specJsonParser;
     private final AppProperties properties;
     private final AdminOperationLogger operationLogger;
+    private final AfterSaleOrderMapper afterSaleOrderMapper;
+    private final NotificationService notificationService;
+    private final ShippingService shippingService;
+    private final CouponService couponService;
+    private final PointsService pointsService;
 
     public CheckoutVO preview(Long userId, CheckoutPreviewRequest request) {
         PreparedCheckout prepared = prepare(
@@ -83,7 +98,8 @@ public class OrderService {
                 request.source(),
                 request.cartItemIds(),
                 request.skuId(),
-                request.quantity());
+                request.quantity(),
+                request.couponId());
         return toCheckoutVO(prepared);
     }
 
@@ -103,7 +119,8 @@ public class OrderService {
                 request.source(),
                 request.cartItemIds(),
                 request.skuId(),
-                request.quantity());
+                request.quantity(),
+                request.couponId());
 
         UserAddress address = prepared.address();
         MallOrder order = new MallOrder();
@@ -115,6 +132,8 @@ public class OrderService {
         order.setDiscountAmount(prepared.amounts().discount());
         order.setShippingFee(prepared.amounts().shipping());
         order.setPayableAmount(prepared.amounts().payable());
+        order.setCouponId(prepared.coupon().couponId());
+        order.setCouponName(prepared.coupon().couponName());
         order.setReceiverName(address.getReceiverName());
         order.setReceiverPhone(address.getPhone());
         order.setReceiverProvince(address.getProvince());
@@ -123,14 +142,33 @@ public class OrderService {
         order.setReceiverDetail(address.getDetail());
         order.setClientRequestNo(requestNo);
         order.setRemark(request.remark() == null ? "" : request.remark().trim());
+        boolean invoiceRequired = Boolean.TRUE.equals(request.invoiceRequired());
+        if (invoiceRequired
+                && (request.invoiceTitle() == null || request.invoiceTitle().isBlank())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "请填写发票抬头");
+        }
+        if (invoiceRequired
+                && (request.invoiceEmail() == null || request.invoiceEmail().isBlank())) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "请填写发票接收邮箱");
+        }
+        order.setInvoiceRequired(invoiceRequired);
+        order.setInvoiceTitle(invoiceRequired ? request.invoiceTitle().trim() : "");
+        order.setInvoiceTaxNo(invoiceRequired && request.invoiceTaxNo() != null
+                ? request.invoiceTaxNo().trim() : "");
+        order.setInvoiceEmail(invoiceRequired ? request.invoiceEmail().trim() : "");
+        order.setAdminRemark("");
         orderMapper.insert(order);
+        couponService.lock(prepared.coupon().couponId(), userId, order.getOrderNo());
 
         for (Line line : prepared.lines()) {
-            int affected = productSkuMapper.deductStock(line.skuId(), line.quantity());
-            if (affected != 1) {
-                throw new BusinessException(ErrorCode.STOCK_INSUFFICIENT,
-                        "库存不足：" + line.productName() + " / " + line.skuSpec());
-            }
+            stockService.deduct(
+                    line.skuId(),
+                    line.quantity(),
+                    "ORDER",
+                    order.getOrderNo(),
+                    OrderOperatorType.USER.name(),
+                    userId,
+                    "下单扣减");
         }
 
         for (Line line : prepared.lines()) {
@@ -260,14 +298,17 @@ public class OrderService {
     }
 
     public OrderDetailVO adminDetail(String orderNo) {
-        return toDetail(adminRequire(orderNo));
+        return toDetail(adminRequire(orderNo), true);
     }
 
     @Transactional
     public OrderDetailVO ship(String orderNo, String logisticsCompany, String logisticsNo, Long adminId) {
         MallOrder order = adminRequire(orderNo);
+        if (PaymentStatus.REFUNDED.name().equals(order.getPaymentStatus())) {
+            throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "订单已退款，不能发货");
+        }
         if (OrderStatus.PENDING_RECEIPT.name().equals(order.getStatus())) {
-            return toDetail(order);
+            return toDetail(order, true);
         }
         if (!OrderStatus.PENDING_SHIPMENT.name().equals(order.getStatus())) {
             throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "当前订单状态不可发货");
@@ -282,14 +323,25 @@ public class OrderService {
                 OrderOperatorType.ADMIN, adminId, "发货：" + logisticsCompany.trim() + " " + logisticsNo.trim());
         operationLogger.log(adminId, "ORDER_SHIP", "ORDER", orderNo,
                 logisticsCompany.trim() + " " + logisticsNo.trim());
-        return toDetail(requireById(order.getId()));
+        notificationService.notifyUser(
+                order.getUserId(),
+                "ORDER_SHIPPED",
+                "订单已发货",
+                "订单 " + order.getOrderNo() + " 已发货，物流："
+                        + logisticsCompany.trim() + " " + logisticsNo.trim(),
+                "ORDER",
+                order.getOrderNo(),
+                Map.of("orderNo", order.getOrderNo(),
+                        "company", logisticsCompany.trim(),
+                        "trackingNo", logisticsNo.trim()));
+        return toDetail(requireById(order.getId()), true);
     }
 
     @Transactional
     public OrderDetailVO adminCancel(String orderNo, String reason, Long adminId) {
         MallOrder order = adminRequire(orderNo);
         if (OrderStatus.CANCELLED.name().equals(order.getStatus())) {
-            return toDetail(order);
+            return toDetail(order, true);
         }
         if (!OrderStatus.PENDING_PAYMENT.name().equals(order.getStatus())) {
             throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "当前订单状态不可取消");
@@ -301,16 +353,17 @@ public class OrderService {
         if (updated == 0) {
             MallOrder latest = orderMapper.selectById(order.getId());
             if (latest != null && OrderStatus.CANCELLED.name().equals(latest.getStatus())) {
-                return toDetail(latest);
+                return toDetail(latest, true);
             }
             throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "订单状态已变化，请刷新后重试");
         }
 
-        restoreStock(order.getId());
+        restoreStock(order, OrderOperatorType.ADMIN, adminId);
+        couponService.release(order.getOrderNo());
         writeLog(order, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED,
                 OrderOperatorType.ADMIN, adminId, cancelReason);
         operationLogger.log(adminId, "ORDER_CANCEL", "ORDER", orderNo, cancelReason);
-        return toDetail(requireById(order.getId()));
+        return toDetail(requireById(order.getId()), true);
     }
 
     @Transactional
@@ -340,7 +393,8 @@ public class OrderService {
             throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "订单状态已变化，请刷新后重试");
         }
 
-        restoreStock(order.getId());
+        restoreStock(order, OrderOperatorType.USER, userId);
+        couponService.release(order.getOrderNo());
         writeLog(order, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED,
                 OrderOperatorType.USER, userId, cancelReason);
         return toDetail(requireById(order.getId()));
@@ -367,7 +421,96 @@ public class OrderService {
 
         writeLog(order, OrderStatus.PENDING_RECEIPT, OrderStatus.COMPLETED,
                 OrderOperatorType.USER, userId, "确认收货");
+        pointsService.awardOrderPoints(order.getOrderNo(), order.getUserId(),
+                order.getPayableAmount());
         return toDetail(requireById(order.getId()));
+    }
+
+    @Transactional
+    public OrderDetailVO changeAddress(Long userId, String orderNo, Long addressId) {
+        MallOrder order = requireOwned(userId, orderNo);
+        if (!OrderStatus.PENDING_SHIPMENT.name().equals(order.getStatus())) {
+            throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "当前订单状态不能修改收货地址");
+        }
+        if (!PaymentStatus.PAID.name().equals(order.getPaymentStatus())
+                && !PaymentStatus.PARTIALLY_REFUNDED.name().equals(order.getPaymentStatus())) {
+            throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "订单支付状态不允许修改地址");
+        }
+        if (hasActiveAfterSale(order.getId())) {
+            throw new BusinessException(ErrorCode.CONFLICT, "售后处理中，不能修改收货地址");
+        }
+        UserAddress address = addressService.requireOwned(userId, addressId);
+        int updated = orderMapper.updateReceiver(
+                order.getId(),
+                address.getReceiverName(),
+                address.getPhone(),
+                address.getProvince(),
+                address.getCity(),
+                address.getDistrict(),
+                address.getDetail());
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.ORDER_STATE_INVALID, "订单状态已变化，请刷新后重试");
+        }
+        writeLog(order, OrderStatus.PENDING_SHIPMENT, OrderStatus.PENDING_SHIPMENT,
+                OrderOperatorType.USER, userId, "用户修改收货地址");
+        return toDetail(requireById(order.getId()));
+    }
+
+    @Transactional
+    public OrderDetailVO updateAdminRemark(String orderNo, String remark, Long adminId) {
+        MallOrder order = adminRequire(orderNo);
+        String normalized = remark == null ? "" : remark.trim();
+        if (normalized.length() > 255) {
+            throw new BusinessException(ErrorCode.VALIDATION_ERROR, "后台备注过长");
+        }
+        orderMapper.updateAdminRemark(order.getId(), normalized);
+        operationLogger.log(adminId, "ORDER_REMARK", "ORDER", orderNo, normalized);
+        return toDetail(requireById(order.getId()), true);
+    }
+
+    @Transactional
+    public boolean autoConfirmReceipt(Long orderId, int days) {
+        MallOrder order = orderMapper.selectById(orderId);
+        if (order == null || !OrderStatus.PENDING_RECEIPT.name().equals(order.getStatus())) {
+            return false;
+        }
+        if (PaymentStatus.REFUNDED.name().equals(order.getPaymentStatus())) {
+            return false;
+        }
+        if (order.getShippedAt() == null
+                || order.getShippedAt().plusDays(Math.max(days, 1)).isAfter(LocalDateTime.now())) {
+            return false;
+        }
+        if (hasActiveAfterSale(orderId)) {
+            return false;
+        }
+        int updated = orderMapper.transitionToCompleted(orderId);
+        if (updated == 0) {
+            return false;
+        }
+        writeLog(order, OrderStatus.PENDING_RECEIPT, OrderStatus.COMPLETED,
+                OrderOperatorType.SYSTEM, null, "超时自动确认收货");
+        pointsService.awardOrderPoints(order.getOrderNo(), order.getUserId(),
+                order.getPayableAmount());
+        notificationService.notifyUser(
+                order.getUserId(),
+                "ORDER_AUTO_COMPLETED",
+                "订单已自动完成",
+                "订单 " + order.getOrderNo() + " 发货后已超过 " + Math.max(days, 1)
+                        + " 天，系统已自动确认收货。",
+                "ORDER",
+                order.getOrderNo(),
+                Map.of("orderNo", order.getOrderNo()));
+        return true;
+    }
+
+    private boolean hasActiveAfterSale(Long orderId) {
+        AfterSaleOrder latest = afterSaleOrderMapper.selectOne(
+                new LambdaQueryWrapper<AfterSaleOrder>()
+                        .eq(AfterSaleOrder::getOrderId, orderId)
+                        .orderByDesc(AfterSaleOrder::getId)
+                        .last("LIMIT 1"));
+        return latest != null && AfterSaleStatus.from(latest.getStatus()).isActive();
     }
 
     @Transactional
@@ -381,7 +524,8 @@ public class OrderService {
         if (updated == 0) {
             return;
         }
-        restoreStock(orderId);
+        restoreStock(order, OrderOperatorType.SYSTEM, null);
+        couponService.release(order.getOrderNo());
         writeLog(order, OrderStatus.PENDING_PAYMENT, OrderStatus.CANCELLED,
                 OrderOperatorType.SYSTEM, null, "超时未支付");
     }
@@ -391,7 +535,8 @@ public class OrderService {
                                      String sourceValue,
                                      List<Long> cartItemIds,
                                      Long skuId,
-                                     Integer quantity) {
+                                     Integer quantity,
+                                     Long couponId) {
         UserAddress address = addressService.requireOwned(userId, addressId);
         OrderSource source = OrderSource.from(sourceValue);
 
@@ -425,8 +570,20 @@ public class OrderService {
             lines = List.of(buildLine(skuId, quantity));
         }
 
-        Amounts amounts = calculateAmounts(lines);
-        return new PreparedCheckout(normalizedCartItemIds, address, lines, amounts);
+        Amounts base = calculateAmounts(lines, address.getProvince());
+        CouponService.CouponApplication coupon = couponService.calculate(
+                userId,
+                couponId,
+                lines.stream().map(line -> new CouponService.CouponLine(
+                        line.productId(), line.categoryId(), line.subtotal())).toList(),
+                base.goods());
+        Amounts amounts = new Amounts(
+                base.goods(),
+                coupon.discount(),
+                base.shipping(),
+                base.goods().add(base.shipping()).subtract(coupon.discount())
+                        .max(ZERO).setScale(2, RoundingMode.HALF_UP));
+        return new PreparedCheckout(normalizedCartItemIds, address, lines, amounts, coupon);
     }
 
     private Line buildLine(Long skuId, Integer quantity) {
@@ -452,6 +609,7 @@ public class OrderService {
         String specText = String.join(" / ", specJsonParser.parse(sku.getSpecJson()).values());
         return new Line(
                 product.getId(),
+                product.getCategoryId(),
                 sku.getId(),
                 product.getName(),
                 specText.isBlank() ? "默认规格" : specText,
@@ -461,19 +619,15 @@ public class OrderService {
                 subtotal);
     }
 
-    private Amounts calculateAmounts(List<Line> lines) {
+    private Amounts calculateAmounts(List<Line> lines, String province) {
         BigDecimal goods = lines.stream()
                 .map(Line::subtotal)
                 .reduce(ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal threshold = properties.getShipping().getFreeThreshold();
-        BigDecimal fee = properties.getShipping().getFee();
-        BigDecimal shipping;
-        if (threshold == null || threshold.signum() <= 0 || goods.compareTo(threshold) >= 0) {
-            shipping = ZERO;
-        } else {
-            shipping = fee == null ? ZERO : fee.setScale(2, RoundingMode.HALF_UP);
-        }
+        BigDecimal shipping = shippingService.calculate(province, lines.stream()
+                .map(line -> new ShippingService.ShippingLine(
+                        line.productId(), line.quantity(), line.subtotal()))
+                .toList());
         BigDecimal discount = ZERO;
         BigDecimal payable = goods.add(shipping).subtract(discount).setScale(2, RoundingMode.HALF_UP);
         return new Amounts(goods, discount, shipping, payable);
@@ -489,7 +643,8 @@ public class OrderService {
                         line.productImage(),
                         line.unitPrice(),
                         line.quantity(),
-                        line.subtotal()))
+                        line.subtotal(),
+                        null))
                 .toList();
         return new CheckoutVO(
                 toAddressSnapshot(prepared.address()),
@@ -498,10 +653,16 @@ public class OrderService {
                 prepared.amounts().discount(),
                 prepared.amounts().shipping(),
                 prepared.amounts().payable(),
-                properties.getShipping().getFreeThreshold());
+                properties.getShipping().getFreeThreshold(),
+                prepared.coupon().couponId(),
+                prepared.coupon().couponName());
     }
 
     private OrderDetailVO toDetail(MallOrder order) {
+        return toDetail(order, false);
+    }
+
+    private OrderDetailVO toDetail(MallOrder order, boolean includeAdmin) {
         List<MallOrderItem> orderItems = orderItemMapper.selectList(new LambdaQueryWrapper<MallOrderItem>()
                 .eq(MallOrderItem::getOrderId, order.getId())
                 .orderByAsc(MallOrderItem::getId));
@@ -514,7 +675,8 @@ public class OrderService {
                         item.getProductImage(),
                         item.getUnitPrice(),
                         item.getQuantity() == null ? 0 : item.getQuantity(),
-                        item.getSubtotal()))
+                        item.getSubtotal(),
+                        item.getId()))
                 .toList();
         List<OrderStatusLogVO> logs = statusLogMapper.selectList(new LambdaQueryWrapper<OrderStatusLog>()
                         .eq(OrderStatusLog::getOrderId, order.getId())
@@ -528,6 +690,12 @@ public class OrderService {
                         log.getRemark(),
                         log.getCreatedAt()))
                 .toList();
+
+        AfterSaleOrder afterSale = afterSaleOrderMapper.selectOne(
+                new LambdaQueryWrapper<AfterSaleOrder>()
+                        .eq(AfterSaleOrder::getOrderId, order.getId())
+                        .orderByDesc(AfterSaleOrder::getId)
+                        .last("LIMIT 1"));
 
         return new OrderDetailVO(
                 order.getOrderNo(),
@@ -554,7 +722,16 @@ public class OrderService {
                 order.getCompletedAt(),
                 order.getCancelledAt(),
                 order.getCancelReason(),
-                logs);
+                logs,
+                afterSale == null ? null : afterSale.getAfterSaleNo(),
+                afterSale == null ? null : afterSale.getStatus(),
+                Boolean.TRUE.equals(order.getInvoiceRequired()),
+                order.getInvoiceTitle() == null ? "" : order.getInvoiceTitle(),
+                order.getInvoiceTaxNo() == null ? "" : order.getInvoiceTaxNo(),
+                order.getInvoiceEmail() == null ? "" : order.getInvoiceEmail(),
+                includeAdmin && order.getAdminRemark() != null ? order.getAdminRemark() : "",
+                order.getCouponId(),
+                order.getCouponName() == null ? "" : order.getCouponName());
     }
 
     private AddressSnapshotVO toAddressSnapshot(UserAddress address) {
@@ -594,15 +771,24 @@ public class OrderService {
         return order;
     }
 
-    private void restoreStock(Long orderId) {
+    private void restoreStock(MallOrder order,
+                              OrderOperatorType operatorType,
+                              Long operatorId) {
         List<MallOrderItem> items = orderItemMapper.selectList(new LambdaQueryWrapper<MallOrderItem>()
-                .eq(MallOrderItem::getOrderId, orderId));
+                        .eq(MallOrderItem::getOrderId, order.getId()))
+                .stream()
+                .sorted(Comparator.comparing(MallOrderItem::getSkuId))
+                .toList();
         for (MallOrderItem item : items) {
-            int affected = productSkuMapper.restoreStock(
-                    item.getSkuId(), item.getQuantity() == null ? 0 : item.getQuantity());
-            if (affected != 1) {
-                log.warn("failed to restore stock for sku {} order {}", item.getSkuId(), orderId);
-            }
+            stockService.restore(
+                    item.getSkuId(),
+                    item.getQuantity() == null ? 0 : item.getQuantity(),
+                    StockChangeType.ORDER_CANCEL_RESTORE,
+                    "ORDER",
+                    order.getOrderNo(),
+                    operatorType.name(),
+                    operatorId,
+                    "订单取消回补");
         }
     }
 
@@ -624,6 +810,7 @@ public class OrderService {
 
     private record Line(
             Long productId,
+            Long categoryId,
             Long skuId,
             String productName,
             String skuSpec,
@@ -646,7 +833,8 @@ public class OrderService {
             List<Long> cartItemIds,
             UserAddress address,
             List<Line> lines,
-            Amounts amounts
+            Amounts amounts,
+            CouponService.CouponApplication coupon
     ) {
     }
 }

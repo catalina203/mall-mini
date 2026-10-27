@@ -97,3 +97,18 @@
   border: none;
   border-radius: 999rpx;
 }
+
+
+.select-hint {
+  padding: 20rpx 24rpx;
+  margin-bottom: 20rpx;
+  color: #8a3a26;
+  font-size: 23rpx;
+  line-height: 1.6;
+  background: #fdf2ee;
+  border-radius: 14rpx;
+}
+
+.address-card.selectable {
+  border: 2rpx solid #f3d6cd;
+}

@@ -23,6 +23,15 @@ public record OrderDetailVO(
         LocalDateTime completedAt,
         LocalDateTime cancelledAt,
         String cancelReason,
-        List<OrderStatusLogVO> statusLogs
+        List<OrderStatusLogVO> statusLogs,
+        String afterSaleNo,
+        String afterSaleStatus,
+        boolean invoiceRequired,
+        String invoiceTitle,
+        String invoiceTaxNo,
+        String invoiceEmail,
+        String adminRemark,
+        Long couponId,
+        String couponName
 ) {
 }

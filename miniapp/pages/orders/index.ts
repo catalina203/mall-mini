@@ -171,10 +171,12 @@ Page({
   },
 
   toCard(order: OrderSummary): OrderCard {
+    const refunded = order.paymentStatus === 'REFUNDED'
+    const partialRefunded = order.paymentStatus === 'PARTIALLY_REFUNDED'
     return {
       ...order,
-      statusText: orderStatusText(order.status),
-      statusClass: orderStatusClass(order.status),
+      statusText: refunded ? '已退款' : partialRefunded ? '部分退款' : orderStatusText(order.status),
+      statusClass: refunded ? 'status-refunded' : orderStatusClass(order.status),
       amountText: formatPrice(order.payableAmount),
       createdAtText: formatDateTime(order.createdAt),
     }

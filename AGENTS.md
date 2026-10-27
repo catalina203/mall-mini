@@ -770,19 +770,24 @@ FLUSH PRIVILEGES;
 
 ### 20.3 启动服务端
 
+推荐使用 `server/.env` + 启动脚本：
+
 ```bash
 cd /Users/catalina/Workspace/module/mall-mini/server
+cp .env.example .env   # 首次
+./run-dev.sh
+```
 
+停止：`./stop-dev.sh`。脚本自动加载 `.env`、选择 JDK 17 并执行 `mvn spring-boot:run`。
+
+手动方式：
+
+```bash
 export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
 export SPRING_PROFILES_ACTIVE=dev
 export DB_URL='jdbc:mysql://localhost:3307/mall_mini?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true'
 export DB_USERNAME=mallmini
 export DB_PASSWORD=mallmini_dev
-
-# 可选：仅当库中没有任何管理员时首次创建；密码不要提交到仓库
-# export APP_ADMIN_INIT_USERNAME=admin
-# export APP_ADMIN_INIT_PASSWORD='至少8位的强密码'
-
 mvn spring-boot:run
 ```
 

@@ -68,6 +68,9 @@ app:
   order:
     cancel-minutes: ${APP_ORDER_CANCEL_MINUTES:30}
     auto-cancel-enabled: ${APP_AUTO_CANCEL_ENABLED:true}
+    auto-confirm-enabled: ${APP_ORDER_AUTO_CONFIRM_ENABLED:true}
+    auto-confirm-days: ${APP_ORDER_AUTO_CONFIRM_DAYS:7}
+    auto-confirm-check-ms: ${APP_ORDER_AUTO_CONFIRM_CHECK_MS:1800000}
   storage:
     local-dir: ${APP_STORAGE_LOCAL_DIR:./uploads}
   admin-init:
@@ -78,6 +81,8 @@ app:
   wechat:
     app-id: ${WECHAT_APP_ID:}
     app-secret: ${WECHAT_APP_SECRET:}
+  stock:
+    alert-threshold: ${APP_STOCK_ALERT_THRESHOLD:10}
 
 logging:
   level:

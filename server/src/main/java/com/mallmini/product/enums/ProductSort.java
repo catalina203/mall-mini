@@ -4,6 +4,7 @@ import java.util.Locale;
 
 public enum ProductSort {
     NEW,
+    SALES,
     PRICE_ASC,
     PRICE_DESC;
 

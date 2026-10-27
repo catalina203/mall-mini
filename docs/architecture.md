@@ -60,19 +60,29 @@ mall-mini/
 | --- | --- |
 | `common` | 统一响应、异常、错误码、分页、工具、请求 ID |
 | `config` | MyBatis-Plus、OpenAPI、CORS、Jackson、存储配置 |
-| `security` | 用户/管理员 JWT 解析、SecurityFilterChain、登录态上下文 |
+| `security` | 用户/管理员 JWT 解析、角色与权限 authorities、登录态上下文 |
 | `auth` | 开发登录、微信登录适配、令牌签发 |
 | `user` | 用户资料、用户状态 |
-| `admin` | 管理员账号、管理员认证、仪表盘、操作日志 |
+| `admin` | 管理员账号、认证、RBAC、操作日志、CSV 导出 |
 | `category` | 分类查询与管理 |
 | `product` | 商品、SKU、图片、上下架、库存查询 |
-| `inventory` | 库存条件扣减与幂等回补 |
+| `inventory` | 库存行锁扣减/回补、库存流水、低库存预警 |
+| `coupon` | 优惠券模板、领取、算价、锁定与释放 |
+| `shipping` | 运费模板、区域规则与运费计算 |
+| `review` | 商品评价、审核、回复、评分聚合 |
+| `favorite` | 收藏与浏览足迹 |
+| `search` | 搜索热词、中文全文搜索辅助 |
+| `member` | 积分账户、积分流水、会员等级 |
+| `support` | 客服工单与回复 |
 | `cart` | 购物车（仅登录用户，持久化） |
 | `address` | 收货地址与默认地址一致性 |
 | `order` | 结算预览、创建订单、状态机、发货、确认收货 |
+| `aftersale` | 售后申请/审核/退货、退款记录、模拟/手工退款网关 |
 | `payment` | 支付抽象、模拟支付适配器、支付记录 |
+| `notification` | 站内通知、通知记录、后续订阅消息/短信扩展点 |
 | `banner` | 轮播图查询与管理 |
 | `storage` | 图片存储接口 + 本地存储适配器 |
+| `dashboard` | 经营指标、退款/净收入/客单价/趋势聚合 |
 
 分层约束：
 
@@ -85,13 +95,15 @@ mall-mini/
 
 - 采用 **JWT**（无服务端会话）。密钥、有效期来自环境变量。
 - 两类主体：`USER`（小程序用户）与 `ADMIN`（管理后台）。
-- JWT claims：`sub`（主体 ID）、`role`（USER/ADMIN）、`iat`、`exp`。
+- JWT claims：`sub`（主体 ID）、`role`（USER/ADMIN）、`iat`、`exp`；管理员额外包含 `ver`（token version）。
+- 管理员每次请求从数据库加载当前角色与权限，角色调整后立即生效；`ver` 不匹配则令牌失效。
 - Spring Security 两条过滤链：
   - `/api/v1/admin/**`：要求 `ROLE_ADMIN`。
   - `/api/v1/me/**`：要求 `ROLE_USER`。
   - 商品/分类/轮播图/首页读接口公开；支付回调公开但验签。
 - 所有资源访问在 Service 层按 `userId` 过滤，防止 ID 越权；前端路由守卫只做体验控制。
 - 密码使用 BCrypt；管理员通过初始化命令或 SQL 脚本按需创建，仓库不内置生产弱口令。
+- RBAC 角色：`SUPER_ADMIN / OPERATOR / CUSTOMER_SERVICE / WAREHOUSE`；权限矩阵在 `AdminPermissionService` 维护，接口用 `@PreAuthorize` 强制校验。
 
 ### 登录方式
 
@@ -103,14 +115,15 @@ mall-mini/
 ### 6.1 订单状态机
 
 ```text
-PENDING_PAYMENT --支付成功--> PENDING_SHIPMENT --管理员发货--> PENDING_RECEIPT --用户确认--> COMPLETED
+PENDING_PAYMENT --支付成功--> PENDING_SHIPMENT --管理员发货--> PENDING_RECEIPT --用户确认/超时自动确认--> COMPLETED
        |
        +--用户取消/超时取消--> CANCELLED
 ```
 
-- 支付状态独立字段：`UNPAID / PAID / REFUNDED`，不与订单状态混用。
+- 支付状态独立字段：`UNPAID / PAID / PARTIALLY_REFUNDED / REFUNDED`，不与订单状态混用；已退款订单禁止发货。
 - 状态变更只能通过 Service 中受控方法，写 `order_status_log`。
 - 客户端不能提交目标状态；接口语义化（cancel / confirm-receipt / ship）。
+- 自动确认收货 Job 扫描超期未完成订单，带 SYSTEM 日志与用户通知；售后中或已退款订单跳过。
 
 ### 6.2 库存
 
@@ -119,6 +132,22 @@ PENDING_PAYMENT --支付成功--> PENDING_SHIPMENT --管理员发货--> PENDING_
 - 影响行数 ≠ 1 即库存不足，抛业务异常，整个事务回滚（无半成品订单）。
 - 取消未支付订单在同一事务内回补库存，并把订单置为 `CANCELLED`；状态条件更新保证只回补一次。
 - 库存列带 `CHECK (stock >= 0)`，双重保障。
+- 所有库存变化写 `stock_log`（前后值、业务单号、操作人）；回补按业务键幂等。
+- 售后退货入库在管理员确认收到退货且退款成功后执行，只对 `RETURN_REFUND` 生效。
+
+### 6.5 售后与退款
+
+```text
+APPLIED -> APPROVED -> REFUNDING -> REFUNDED / REFUND_FAILED
+APPLIED -> WAIT_RETURN -> RETURNED -> RETURN_RECEIVED -> REFUNDING -> REFUNDED
+APPLIED -> REJECTED
+APPLIED/APPROVED/WAIT_RETURN -> CANCELLED
+```
+
+- 退款金额由服务端按订单明细与实付金额计算，客户端不可提交。
+- 开发环境使用 `MOCK` 退款；生产未接微信退款时使用 `MANUAL` 并记录线下凭证，不静默成功。
+- 退款成功更新 `payment_status`，退货退款才回补库存；退款记录与售后状态均幂等。
+- 外部退款渠道通过 `RefundGateway` 隔离，后续接入微信退款不影响订单/售后核心逻辑。
 
 ### 6.3 幂等
 
@@ -145,6 +174,8 @@ PENDING_PAYMENT --支付成功--> PENDING_SHIPMENT --管理员发货--> PENDING_
 | `APP_FREE_SHIPPING_THRESHOLD` | 包邮门槛（元） | 99.00 |
 | `APP_SHIPPING_FEE` | 固定运费（元） | 10.00 |
 | `APP_ORDER_CANCEL_MINUTES` | 未支付取消时限 | 30 |
+| `APP_ORDER_AUTO_CONFIRM_DAYS` | 自动确认收货天数 | 7 |
+| `APP_STOCK_ALERT_THRESHOLD` | 库存预警阈值 | 10 |
 | `APP_STORAGE_LOCAL_DIR` | 本地图片目录 | ./uploads |
 | `WECHAT_APP_ID / WECHAT_APP_SECRET` | 微信登录 | 空 |
 | `CORS_ALLOWED_ORIGINS` | 后台来源白名单 | http://localhost:5173,http://127.0.0.1:5173 |
@@ -154,6 +185,7 @@ PENDING_PAYMENT --支付成功--> PENDING_SHIPMENT --管理员发货--> PENDING_
 ## 8. 外部服务边界
 
 - `PaymentGateway` 接口：`MockPaymentGateway`（dev）与未来 `WechatPayGateway`（prod）。
+- `RefundGateway` 接口：`MockRefundGateway`（dev）；生产未接微信退款时使用 `MANUAL` 线下凭证登记。
 - `StorageService` 接口：`LocalStorageService`（dev），生产可替换对象存储。
 - 物流仅存公司/单号，不接第三方查询。
 
@@ -178,6 +210,10 @@ Redis 首版不接入。
 | 6 | 管理后台 | 登录、CRUD、发货可用 |
 | 7 | 模拟支付与扩展边界 | dev 模拟支付，prod 禁用 |
 | 8 | 回归与交付文档 | 全部测试与构建通过 |
+| R1 | 售后/退款、库存流水、站内通知 | 退款幂等、库存回补、通知记录 |
+| R2 | RBAC、管理员管理、审计、导出、自动确认、看板 | 角色隔离、旧令牌失效、CSV 与指标 |
+| R3 | 优惠券、运费模板、评价、收藏/足迹 | 算价可信、领取不超发、评价审核 |
+| R4 | 搜索优化、客服工单、会员积分、首页运营位 | 中文搜索、积分闭环、工单可处理 |
 
 ## 11. 关键风险与决策
 
@@ -190,4 +226,4 @@ Redis 首版不接入。
 
 ## 12. 非目标（后续扩展）
 
-优惠券、收藏、评价、售后/退款、多商户、虚拟商品、Redis 缓存、真实微信支付与物流查询、对象存储。
+多商户、虚拟商品、Redis 缓存、真实微信支付/退款/物流查询、电子发票、对象存储、大数据量异步导出、复杂促销规则引擎、积分抵现。

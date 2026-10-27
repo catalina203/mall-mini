@@ -1,0 +1,65 @@
+<view class="page coupons-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后领券</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <view class="tabs">
+      <view class="tab {{tab == 'claimable' ? 'tab-active' : ''}}" data-tab="claimable" bindtap="switchTab">
+        可领取
+      </view>
+      <view class="tab {{tab == 'mine' ? 'tab-active' : ''}}" data-tab="mine" bindtap="switchTab">
+        我的优惠券
+      </view>
+    </view>
+
+    <view wx:if="{{loading}}" class="state"><text>正在加载…</text></view>
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="load">重试</button>
+    </view>
+
+    <block wx:else>
+      <view wx:if="{{tab == 'claimable' && claimable.length}}" class="list">
+        <view wx:for="{{claimable}}" wx:key="id" class="coupon-card">
+          <view class="coupon-left">
+            <text class="value">{{item.valueText}}</text>
+            <text class="condition">{{item.conditionText}}</text>
+          </view>
+          <view class="coupon-body">
+            <text class="name">{{item.name}}</text>
+            <text class="meta">{{item.validText}}</text>
+            <text class="meta">{{item.remainingText}}</text>
+          </view>
+          <button
+            class="claim-button"
+            data-id="{{item.id}}"
+            bindtap="claim"
+            loading="{{acting}}"
+            disabled="{{acting}}"
+          >领取</button>
+        </view>
+      </view>
+
+      <view wx:elif="{{tab == 'mine' && mine.length}}" class="list">
+        <view wx:for="{{mine}}" wx:key="id" class="coupon-card {{item.status != 'UNUSED' ? 'coupon-disabled' : ''}}">
+          <view class="coupon-left">
+            <text class="value">{{item.valueText}}</text>
+            <text class="condition">{{item.conditionText}}</text>
+          </view>
+          <view class="coupon-body">
+            <text class="name">{{item.name}}</text>
+            <text class="meta">{{item.validText}}</text>
+            <text class="meta">{{item.statusLine}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="state">
+        <text>{{tab == 'claimable' ? '暂无可领取优惠券' : '暂无优惠券'}}</text>
+        <text class="state-hint">优惠券会在这里显示</text>
+      </view>
+    </block>
+  </block>
+</view>

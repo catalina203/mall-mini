@@ -1,0 +1,115 @@
+<view class="page after-sale-detail-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看售后详情</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view wx:elif="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+
+  <block wx:elif="{{detail}}">
+    <view class="status-card {{detail.statusClass}}">
+      <text class="status-text">{{detail.statusText}}</text>
+      <text class="status-note">{{detail.statusNote}}</text>
+      <text class="status-meta">{{detail.typeText}} · {{detail.afterSaleNo}}</text>
+      <view wx:if="{{detail.canCancel}}" class="status-actions">
+        <button size="mini" class="action-button" bindtap="cancel" disabled="{{acting}}">
+          取消售后
+        </button>
+      </view>
+    </view>
+
+    <view class="card">
+      <view class="card-head">
+        <text class="card-title">申请信息</text>
+        <text class="link" bindtap="openOrder">订单 {{detail.orderNo}}</text>
+      </view>
+      <view class="info-row"><text>售后类型</text><text>{{detail.typeText}}</text></view>
+      <view class="info-row"><text>申请原因</text><text>{{detail.reason}}</text></view>
+      <view class="info-row"><text>问题描述</text><text>{{detail.description}}</text></view>
+      <view class="info-row"><text>申请时间</text><text>{{detail.createdAtText}}</text></view>
+      <view class="info-row total-row"><text>退款金额</text><text>{{detail.refundText}}</text></view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">售后商品</text>
+      <view wx:for="{{detail.items}}" wx:key="orderItemId" class="item">
+        <fallback-image class="thumb" src="{{item.productImage}}" />
+        <view class="item-info">
+          <text class="item-name">{{item.productName}}</text>
+          <text class="item-spec">{{item.skuSpec}}</text>
+          <view class="item-row">
+            <text class="item-price">{{item.priceText}}</text>
+            <text class="item-quantity">× {{item.quantity}}</text>
+          </view>
+        </view>
+        <text class="item-refund">{{item.refundText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detail.canReturn}}" class="card">
+      <text class="card-title">填写退货物流</text>
+      <input
+        class="field"
+        placeholder="物流公司，例如：顺丰速运"
+        value="{{returnCompany}}"
+        maxlength="64"
+        bindinput="onCompanyInput"
+      />
+      <input
+        class="field"
+        placeholder="退货物流单号"
+        value="{{returnTrackingNo}}"
+        maxlength="64"
+        bindinput="onTrackingInput"
+      />
+      <button
+        class="primary-button"
+        bindtap="submitReturn"
+        loading="{{submitting}}"
+        disabled="{{submitting}}"
+      >提交退货物流</button>
+    </view>
+
+    <view wx:if="{{detail.returnTrackingNo}}" class="card">
+      <text class="card-title">退货物流</text>
+      <view class="info-row"><text>物流公司</text><text>{{detail.returnCompany}}</text></view>
+      <view class="info-row"><text>物流单号</text><text>{{detail.returnTrackingNo}}</text></view>
+      <view wx:if="{{detail.returnedAtText}}" class="info-row">
+        <text>寄回时间</text><text>{{detail.returnedAtText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detail.refund}}" class="card">
+      <text class="card-title">退款信息</text>
+      <view class="info-row"><text>退款单号</text><text>{{detail.refund.refundNo}}</text></view>
+      <view class="info-row"><text>退款金额</text><text>{{detail.refund.amountText}}</text></view>
+      <view class="info-row"><text>退款渠道</text><text>{{detail.refund.channel}}</text></view>
+      <view class="info-row"><text>退款状态</text><text>{{detail.refund.statusText}}</text></view>
+      <view wx:if="{{detail.refund.successText}}" class="info-row">
+        <text>到账时间</text><text>{{detail.refund.successText}}</text>
+      </view>
+      <view wx:if="{{detail.refund.failedReason}}" class="info-row fail">
+        <text>失败原因</text><text>{{detail.refund.failedReason}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{detail.logs.length}}" class="card">
+      <text class="card-title">售后记录</text>
+      <view wx:for="{{detail.logs}}" wx:key="createdText" class="log-item">
+        <view class="log-dot"></view>
+        <view class="log-content">
+          <text class="log-title">{{item.fromText}} → {{item.toText}}</text>
+          <text class="log-meta">{{item.operatorType}} · {{item.createdText}}</text>
+          <text wx:if="{{item.remark}}" class="log-remark">{{item.remark}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

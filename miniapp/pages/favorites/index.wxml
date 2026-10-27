@@ -1,0 +1,30 @@
+<view class="page list-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看收藏</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+  <view wx:elif="{{loading}}" class="state"><text>正在加载…</text></view>
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load" data-reset="true">重试</button>
+  </view>
+  <block wx:elif="{{items.length}}">
+    <view class="list">
+      <view wx:for="{{items}}" wx:key="productId" class="item-card" data-id="{{item.productId}}" bindtap="openProduct">
+        <fallback-image class="thumb" src="{{item.mainImage}}" />
+        <view class="item-info">
+          <text class="name">{{item.name}}</text>
+          <text class="subtitle">{{item.subtitle}}</text>
+          <text class="price">{{item.priceText}}</text>
+          <text class="time">收藏于 {{item.atText}}</text>
+        </view>
+        <text class="remove" data-id="{{item.productId}}" catchtap="remove">取消</text>
+      </view>
+    </view>
+    <view class="footer">{{hasMore ? '上拉加载更多' : '没有更多了'}}</view>
+  </block>
+  <view wx:else class="state">
+    <text>暂无收藏</text>
+    <text class="state-hint">在商品详情点击收藏</text>
+  </view>
+</view>

@@ -1,0 +1,17 @@
+<view class="page agreement-page">
+  <view class="head">
+    <text class="title">{{brandName}} · {{title}}</text>
+    <text class="meta">{{updatedAt}}</text>
+  </view>
+
+  <view class="notice">
+    本页为脚手架示例文本，不构成正式法律文件。正式上线前请由运营主体和法务/合规人员审核替换。
+  </view>
+
+  <view class="section-list">
+    <view wx:for="{{sections}}" wx:key="heading" class="section">
+      <text class="section-heading">{{item.heading}}</text>
+      <text class="section-body">{{item.body}}</text>
+    </view>
+  </view>
+</view>

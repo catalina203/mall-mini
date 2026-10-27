@@ -115,3 +115,36 @@
   color: #6b7280;
   font-size: 25rpx;
 }
+
+
+.member-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22rpx 26rpx;
+  margin-bottom: 20rpx;
+  color: #fff;
+  background: linear-gradient(135deg, #2b211a, #4a3425);
+  border-radius: 16rpx;
+}
+
+.member-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.member-level {
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.member-points {
+  color: #f4a284;
+  font-size: 30rpx;
+}
+
+.member-link {
+  color: rgb(255 255 255 / 68%);
+  font-size: 22rpx;
+}

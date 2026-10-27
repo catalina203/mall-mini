@@ -1,0 +1,131 @@
+-- R1: 售后、退款、库存流水、通知中心
+
+CREATE TABLE after_sale_order (
+    id                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    after_sale_no      VARCHAR(32)     NOT NULL,
+    order_id           BIGINT UNSIGNED NOT NULL,
+    order_no           VARCHAR(32)     NOT NULL,
+    user_id            BIGINT UNSIGNED NOT NULL,
+    type               VARCHAR(20)     NOT NULL COMMENT 'REFUND_ONLY / RETURN_REFUND',
+    status             VARCHAR(32)     NOT NULL,
+    reason             VARCHAR(255)    NOT NULL,
+    description        VARCHAR(1000)   NOT NULL DEFAULT '',
+    refund_amount      DECIMAL(10, 2)  NOT NULL,
+    return_company     VARCHAR(64)     NULL,
+    return_tracking_no VARCHAR(64)     NULL,
+    review_remark      VARCHAR(255)    NULL,
+    reviewed_by        BIGINT UNSIGNED NULL,
+    reviewed_at        DATETIME(3)     NULL,
+    returned_at        DATETIME(3)     NULL,
+    refunded_at        DATETIME(3)     NULL,
+    closed_at          DATETIME(3)     NULL,
+    created_at         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at         DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_after_sale_no (after_sale_no),
+    KEY idx_after_sale_user_created (user_id, created_at),
+    KEY idx_after_sale_order (order_id),
+    KEY idx_after_sale_status_created (status, created_at),
+    CONSTRAINT chk_after_sale_amount CHECK (refund_amount >= 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '售后单';
+
+CREATE TABLE after_sale_item (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    after_sale_id BIGINT UNSIGNED NOT NULL,
+    order_item_id BIGINT UNSIGNED NOT NULL,
+    product_id    BIGINT UNSIGNED NOT NULL,
+    sku_id        BIGINT UNSIGNED NOT NULL,
+    product_name  VARCHAR(128)    NOT NULL,
+    sku_spec      VARCHAR(255)    NOT NULL DEFAULT '',
+    product_image VARCHAR(512)    NOT NULL DEFAULT '',
+    unit_price    DECIMAL(10, 2)  NOT NULL,
+    quantity      INT             NOT NULL,
+    refund_amount DECIMAL(10, 2)  NOT NULL,
+    created_at    DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_after_sale_item (after_sale_id, order_item_id),
+    KEY idx_after_sale_item_sku (sku_id),
+    CONSTRAINT chk_after_sale_item_qty CHECK (quantity > 0),
+    CONSTRAINT chk_after_sale_item_amount CHECK (unit_price >= 0 AND refund_amount >= 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '售后明细';
+
+CREATE TABLE after_sale_log (
+    id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    after_sale_id BIGINT UNSIGNED NOT NULL,
+    from_status   VARCHAR(32)     NULL,
+    to_status     VARCHAR(32)     NOT NULL,
+    operator_type VARCHAR(20)     NOT NULL,
+    operator_id   BIGINT UNSIGNED NULL,
+    remark        VARCHAR(255)    NOT NULL DEFAULT '',
+    created_at    DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    KEY idx_after_sale_log (after_sale_id, created_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '售后状态日志';
+
+CREATE TABLE refund_record (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    refund_no       VARCHAR(32)     NOT NULL,
+    after_sale_id   BIGINT UNSIGNED NOT NULL,
+    order_id        BIGINT UNSIGNED NOT NULL,
+    order_no        VARCHAR(32)     NOT NULL,
+    channel         VARCHAR(20)     NOT NULL COMMENT 'MOCK / WECHAT / MANUAL',
+    amount          DECIMAL(10, 2)  NOT NULL,
+    status          VARCHAR(20)     NOT NULL COMMENT 'PENDING / SUCCESS / FAILED',
+    transaction_no  VARCHAR(64)     NULL,
+    requested_at    DATETIME(3)     NOT NULL,
+    success_at      DATETIME(3)     NULL,
+    failed_reason   VARCHAR(255)    NULL,
+    created_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at      DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_refund_no (refund_no),
+    UNIQUE KEY uk_refund_after_sale (after_sale_id),
+    KEY idx_refund_order (order_no),
+    KEY idx_refund_status (status),
+    CONSTRAINT chk_refund_amount CHECK (amount >= 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '退款记录';
+
+CREATE TABLE stock_log (
+    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    sku_id         BIGINT UNSIGNED NOT NULL,
+    product_id     BIGINT UNSIGNED NOT NULL,
+    change_type    VARCHAR(32)     NOT NULL,
+    quantity_delta INT             NOT NULL,
+    stock_before   INT             NOT NULL,
+    stock_after    INT             NOT NULL,
+    biz_type       VARCHAR(32)     NOT NULL DEFAULT '',
+    biz_no         VARCHAR(64)     NOT NULL DEFAULT '',
+    operator_type  VARCHAR(20)     NOT NULL DEFAULT 'SYSTEM',
+    operator_id    BIGINT UNSIGNED NULL,
+    remark         VARCHAR(255)    NOT NULL DEFAULT '',
+    created_at     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_stock_log_biz (change_type, biz_no, sku_id),
+    KEY idx_stock_log_sku_created (sku_id, created_at),
+    KEY idx_stock_log_biz_no (biz_no),
+    CONSTRAINT chk_stock_log_values CHECK (stock_before >= 0 AND stock_after >= 0)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '库存流水';
+
+CREATE TABLE notification_log (
+    id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    channel        VARCHAR(20)     NOT NULL COMMENT 'IN_APP / MINIPROGRAM / SMS',
+    recipient_type VARCHAR(20)     NOT NULL COMMENT 'USER / ADMIN',
+    recipient_id   BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    template_code  VARCHAR(64)     NOT NULL,
+    title          VARCHAR(128)    NOT NULL,
+    content        VARCHAR(1000)   NOT NULL DEFAULT '',
+    biz_type       VARCHAR(32)     NOT NULL DEFAULT '',
+    biz_no         VARCHAR(64)     NOT NULL DEFAULT '',
+    payload_json   TEXT            NULL,
+    status         VARCHAR(20)     NOT NULL COMMENT 'PENDING / SENT / FAILED / SKIPPED',
+    retry_count    INT             NOT NULL DEFAULT 0,
+    read_at        DATETIME(3)     NULL,
+    sent_at        DATETIME(3)     NULL,
+    error_message  VARCHAR(255)    NULL,
+    created_at     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at     DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    KEY idx_notification_recipient (recipient_type, recipient_id, read_at),
+    KEY idx_notification_status (status),
+    KEY idx_notification_biz (biz_type, biz_no)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '通知记录';

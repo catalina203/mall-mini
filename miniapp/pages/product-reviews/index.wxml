@@ -1,0 +1,36 @@
+<view class="page reviews-page">
+  <view wx:if="{{loading}}" class="state"><text>正在加载…</text></view>
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+  <block wx:else>
+    <view class="summary-card">
+      <text class="average">{{averageText}}</text>
+      <view class="summary-info">
+        <text class="summary-title">商品评分</text>
+        <text class="summary-meta">共 {{summary.reviewCount}} 条已审核评价</text>
+      </view>
+    </view>
+
+    <view wx:if="{{items.length}}" class="list">
+      <view wx:for="{{items}}" wx:key="id" class="review-card">
+        <view class="review-head">
+          <text class="nickname">{{item.userNickname}}</text>
+          <text class="stars">{{item.stars}}</text>
+        </view>
+        <text class="content">{{item.content || '用户未填写文字评价'}}</text>
+        <text class="time">{{item.createdText}}</text>
+        <view wx:if="{{item.reply}}" class="reply">
+          <text class="reply-label">商家回复</text>
+          <text class="reply-content">{{item.reply}}</text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="state">
+      <text>暂无评价</text>
+      <text class="state-hint">订单完成后可评价商品</text>
+    </view>
+    <view wx:if="{{items.length}}" class="footer">{{loadingMore ? '正在加载…' : hasMore ? '上拉加载更多' : '没有更多了'}}</view>
+  </block>
+</view>

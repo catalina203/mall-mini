@@ -1,0 +1,169 @@
+.after-sales-page {
+  padding-top: 16rpx;
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  padding: 90rpx 0;
+  color: #6b7280;
+  font-size: 26rpx;
+}
+
+.state-hint {
+  color: #9ca3af;
+  font-size: 23rpx;
+}
+
+.primary {
+  margin: 0;
+  color: #ffffff;
+  background: #d9482b;
+  border: none;
+}
+
+.tabs {
+  display: flex;
+  white-space: nowrap;
+  margin-bottom: 20rpx;
+}
+
+.tab {
+  display: inline-block;
+  padding: 12rpx 26rpx;
+  margin-right: 12rpx;
+  color: #6b7280;
+  font-size: 25rpx;
+  background: #ffffff;
+  border-radius: 999rpx;
+}
+
+.tab-active {
+  color: #ffffff;
+  font-weight: 600;
+  background: #d9482b;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.record-card {
+  padding: 24rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.record-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx solid #f1f2f4;
+}
+
+.record-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.type {
+  color: #1f2329;
+  font-size: 28rpx;
+  font-weight: 600;
+}
+
+.record-no {
+  color: #9ca3af;
+  font-size: 21rpx;
+}
+
+.status {
+  padding: 4rpx 14rpx;
+  font-size: 22rpx;
+  border-radius: 999rpx;
+}
+
+.status-applied,
+.status-approved {
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.status-wait-return,
+.status-returned,
+.status-return-received,
+.status-refunding {
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.status-refunded {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.status-refund-failed {
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.status-rejected,
+.status-cancelled {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.record-body {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding-top: 18rpx;
+}
+
+.thumb {
+  flex-shrink: 0;
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 12rpx;
+}
+
+.record-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.product-name {
+  overflow: hidden;
+  color: #1f2329;
+  font-size: 27rpx;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  color: #9ca3af;
+  font-size: 22rpx;
+}
+
+.amount {
+  color: #d9482b;
+  font-size: 29rpx;
+  font-weight: 600;
+}
+
+.footer {
+  padding: 30rpx 0 10rpx;
+  color: #9ca3af;
+  font-size: 24rpx;
+  text-align: center;
+}

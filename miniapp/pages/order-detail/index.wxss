@@ -45,6 +45,10 @@
   background: linear-gradient(135deg, #4b5563, #9ca3af);
 }
 
+.status-card.status-refunded {
+  background: linear-gradient(135deg, #b91c1c, #ef4444);
+}
+
 .status-text {
   font-size: 36rpx;
   font-weight: 600;
@@ -272,4 +276,17 @@
 .log-remark {
   color: #6b7280;
   font-size: 22rpx;
+}
+
+
+.item-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.review-action {
+  color: #d9482b;
+  font-size: 23rpx;
 }

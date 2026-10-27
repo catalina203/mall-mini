@@ -22,6 +22,7 @@ public class AppProperties {
     private AdminInit adminInit = new AdminInit();
     private Cors cors = new Cors();
     private Wechat wechat = new Wechat();
+    private Stock stock = new Stock();
 
     @Getter
     @Setter
@@ -48,6 +49,8 @@ public class AppProperties {
     public static class Order {
         private int cancelMinutes = 30;
         private boolean autoCancelEnabled = true;
+        private boolean autoConfirmEnabled = true;
+        private int autoConfirmDays = 7;
     }
 
     @Getter
@@ -74,5 +77,11 @@ public class AppProperties {
     public static class Wechat {
         private String appId = "";
         private String appSecret = "";
+    }
+
+    @Getter
+    @Setter
+    public static class Stock {
+        private int alertThreshold = 10;
     }
 }

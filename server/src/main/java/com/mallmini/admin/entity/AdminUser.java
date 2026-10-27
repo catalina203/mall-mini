@@ -24,6 +24,8 @@ public class AdminUser {
 
     private String status;
 
+    private Integer tokenVersion;
+
     private LocalDateTime lastLoginAt;
 
     private LocalDateTime createdAt;

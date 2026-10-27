@@ -1,0 +1,37 @@
+<view class="page review-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后评价</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+  <block wx:else>
+    <view class="card">
+      <text class="product">{{productName || '商品评价'}}</text>
+      <view class="rating-row">
+        <text
+          wx:for="{{ratingOptions}}"
+          wx:key="*this"
+          class="star {{item <= rating ? 'star-active' : ''}}"
+          data-rating="{{item}}"
+          bindtap="selectRating"
+        >★</text>
+        <text class="rating-text">{{rating}} 星</text>
+      </view>
+      <textarea
+        class="textarea"
+        placeholder="说说商品的使用感受（选填）"
+        maxlength="1000"
+        value="{{content}}"
+        bindinput="onContentInput"
+        auto-height
+      />
+      <view class="anonymous-row">
+        <text>匿名评价</text>
+        <switch checked="{{anonymous}}" color="#d9482b" bindchange="onAnonymousChange" />
+      </view>
+      <text class="hint">评价提交后需管理员审核才会展示。</text>
+      <button class="submit" bindtap="submit" loading="{{submitting}}" disabled="{{submitting}}">
+        提交评价
+      </button>
+    </view>
+  </block>
+</view>

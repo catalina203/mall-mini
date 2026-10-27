@@ -31,6 +31,10 @@ public class MallOrder {
 
     private BigDecimal payableAmount;
 
+    private Long couponId;
+
+    private String couponName;
+
     private String receiverName;
 
     private String receiverPhone;
@@ -46,6 +50,16 @@ public class MallOrder {
     private String clientRequestNo;
 
     private String remark;
+
+    private String adminRemark;
+
+    private Boolean invoiceRequired;
+
+    private String invoiceTitle;
+
+    private String invoiceTaxNo;
+
+    private String invoiceEmail;
 
     private String logisticsCompany;
 

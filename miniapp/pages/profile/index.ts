@@ -128,6 +128,50 @@ Page({
     wx.navigateTo({ url: '/pages/address-list/index' })
   },
 
+  openAfterSales() {
+    if (!this.requireLogin()) {
+      return
+    }
+    wx.navigateTo({ url: '/pages/after-sales/index' })
+  },
+
+  openNotifications() {
+    if (!this.requireLogin()) {
+      return
+    }
+    wx.navigateTo({ url: '/pages/notifications/index' })
+  },
+
+  openMember() {
+    if (!this.requireLogin()) return
+    wx.navigateTo({ url: '/pages/member/index' })
+  },
+
+  openSupport() {
+    if (!this.requireLogin()) return
+    wx.navigateTo({ url: '/pages/support/index' })
+  },
+
+  openCoupons() {
+    if (!this.requireLogin()) return
+    wx.navigateTo({ url: '/pages/coupons/index' })
+  },
+
+  openFavorites() {
+    if (!this.requireLogin()) return
+    wx.navigateTo({ url: '/pages/favorites/index' })
+  },
+
+  openHistory() {
+    if (!this.requireLogin()) return
+    wx.navigateTo({ url: '/pages/history/index' })
+  },
+
+  openAgreement(event: WechatMiniprogram.TouchEvent) {
+    const type = String(event.currentTarget.dataset.type ?? 'user')
+    wx.navigateTo({ url: `/pages/agreement/index?type=${type}` })
+  },
+
   requireLogin(): boolean {
     if (this.data.loggedIn) {
       return true

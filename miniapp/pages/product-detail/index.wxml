@@ -70,6 +70,20 @@
       </view>
     </view>
 
+    <view class="card review-entry" bindtap="openReviews">
+      <view class="review-head">
+        <text class="card-title">商品评价</text>
+        <text class="review-link">查看全部 ›</text>
+      </view>
+      <view class="review-summary">
+        <text class="review-score">{{averageRating}}</text>
+        <view class="review-info">
+          <text class="review-stars">★★★★★</text>
+          <text class="review-count">{{reviewCount}} 条已审核评价</text>
+        </view>
+      </view>
+    </view>
+
     <view class="card">
       <text class="card-title">商品描述</text>
       <text class="description">{{product.description}}</text>
@@ -81,6 +95,9 @@
     </view>
 
     <view class="action-bar">
+      <view class="favorite-button {{favorite ? 'favorite-active' : ''}}" bindtap="toggleFavorite">
+        <text>{{favorite ? '已收藏' : '收藏'}}</text>
+      </view>
       <view class="action-price">
         <text class="action-label">小计</text>
         <text class="action-value">{{subtotalText || product.priceText}}</text>

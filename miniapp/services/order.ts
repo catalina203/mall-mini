@@ -39,3 +39,11 @@ export function confirmReceipt(orderNo: string): Promise<OrderDetail> {
     method: 'POST',
   })
 }
+
+export function changeOrderAddress(orderNo: string, addressId: number): Promise<OrderDetail> {
+  return request<OrderDetail>({
+    url: `/me/orders/${orderNo}/address`,
+    method: 'POST',
+    data: { addressId },
+  })
+}

@@ -19,7 +19,8 @@
         </if>
         <if test="keyword != null and keyword != ''">
             AND (
-                p.name LIKE CONCAT('%', #{keyword}, '%')
+                MATCH(p.name, p.subtitle, p.description) AGAINST(#{keyword})
+                OR p.name LIKE CONCAT('%', #{keyword}, '%')
                 OR p.subtitle LIKE CONCAT('%', #{keyword}, '%')
             )
         </if>
@@ -37,6 +38,9 @@
         </if>
         ORDER BY
         <choose>
+            <when test="sort == 'sales'">
+                p.sales_count DESC, p.id DESC
+            </when>
             <when test="sort == 'price_asc'">
                 (SELECT MIN(s4.price) FROM product_sku s4 WHERE s4.product_id = p.id AND s4.status = 'ENABLED') ASC,
                 p.id ASC

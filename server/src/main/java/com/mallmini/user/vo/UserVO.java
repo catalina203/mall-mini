@@ -5,6 +5,9 @@ public record UserVO(
         String nickname,
         String avatarUrl,
         String phone,
-        String status
+        String status,
+        int points,
+        String memberLevel,
+        String memberLevelLabel
 ) {
 }

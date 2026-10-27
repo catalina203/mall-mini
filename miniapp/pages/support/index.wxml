@@ -1,0 +1,53 @@
+<view class="page support-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后联系客服</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+  <block wx:else>
+    <view class="card">
+      <text class="card-title">常见问题</text>
+      <view wx:for="{{faqs}}" wx:key="q" class="faq">
+        <text class="faq-q">{{item.q}}</text>
+        <text class="faq-a">{{item.a}}</text>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">提交工单</text>
+      <picker mode="selector" range="{{types}}" range-key="label" value="{{typeIndex}}" bindchange="onTypeChange">
+        <view class="picker-row">{{types[typeIndex].label}}<text class="arrow">›</text></view>
+      </picker>
+      <input class="field" placeholder="订单号（选填）" value="{{orderNo}}" maxlength="32" bindinput="onOrderInput" />
+      <input class="field" placeholder="问题标题" value="{{subject}}" maxlength="128" bindinput="onSubjectInput" />
+      <textarea class="textarea" placeholder="请描述遇到的问题" value="{{content}}" maxlength="2000" auto-height bindinput="onContentInput" />
+      <button class="submit" bindtap="submit" loading="{{submitting}}" disabled="{{submitting}}">提交工单</button>
+    </view>
+
+    <view class="card">
+      <text class="card-title">我的工单</text>
+      <view wx:if="{{loading}}" class="state"><text>正在加载…</text></view>
+      <view wx:elif="{{error}}" class="state"><text>{{error}}</text><button size="mini" bindtap="load">重试</button></view>
+      <block wx:elif="{{tickets.length}}">
+        <view wx:for="{{tickets}}" wx:key="ticketNo" class="ticket">
+          <view class="ticket-head">
+            <text class="ticket-subject">{{item.subject}}</text>
+            <text class="ticket-status">{{item.statusText}}</text>
+          </view>
+          <text class="ticket-meta">{{item.typeText}} · {{item.ticketNo}}</text>
+          <text wx:if="{{item.orderNo}}" class="ticket-meta">订单 {{item.orderNo}}</text>
+          <text class="ticket-content">{{item.content}}</text>
+          <view wx:if="{{item.reply}}" class="reply">
+            <text class="reply-label">客服回复</text>
+            <text class="reply-content">{{item.reply}}</text>
+            <text class="ticket-meta">{{item.repliedText}}</text>
+          </view>
+          <view class="ticket-foot">
+            <text class="ticket-time">{{item.createdText}}</text>
+            <text wx:if="{{item.status != 'CLOSED'}}" class="close" data-ticket-no="{{item.ticketNo}}" bindtap="close">关闭工单</text>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="state"><text>暂无工单</text></view>
+    </view>
+  </block>
+</view>

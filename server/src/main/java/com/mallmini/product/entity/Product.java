@@ -28,6 +28,10 @@ public class Product {
 
     private Integer sortOrder;
 
+    private Long shippingTemplateId;
+
+    private Integer salesCount;
+
     private LocalDateTime createdAt;
 
     private LocalDateTime updatedAt;

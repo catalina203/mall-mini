@@ -20,6 +20,7 @@ import com.mallmini.product.vo.ProductDetailVO;
 import com.mallmini.product.vo.ProductImageVO;
 import com.mallmini.product.vo.ProductSummaryVO;
 import com.mallmini.product.vo.SkuVO;
+import com.mallmini.search.service.SearchService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ public class ProductService {
     private final ProductImageMapper productImageMapper;
     private final CategoryService categoryService;
     private final SpecJsonParser specJsonParser;
+    private final SearchService searchService;
 
     public PageResult<ProductSummaryVO> listOnSale(long page,
                                                    long pageSize,
@@ -56,6 +58,9 @@ public class ProductService {
         long safePage = Math.max(page, 1);
         long safePageSize = Math.min(Math.max(pageSize, 1), 100);
         String normalizedKeyword = keyword == null || keyword.isBlank() ? null : keyword.trim();
+        if (normalizedKeyword != null && safePage == 1) {
+            searchService.record(normalizedKeyword);
+        }
         ProductSort sort = ProductSort.from(sortValue);
         List<Long> categoryIds = categoryId == null ? null : categoryService.enabledCategoryIds(categoryId);
 
@@ -91,7 +96,8 @@ public class ProductService {
                     product.getMainImage(),
                     min,
                     max,
-                    totalStock));
+                    totalStock,
+                    product.getSalesCount() == null ? 0 : product.getSalesCount()));
         }
         return PageResult.of(items, safePage, safePageSize, productPage.getTotal());
     }

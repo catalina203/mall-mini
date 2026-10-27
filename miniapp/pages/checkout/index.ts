@@ -1,5 +1,6 @@
 import { listAddresses } from '../../services/address'
 import { previewCheckout } from '../../services/checkout'
+import { listMyCoupons } from '../../services/coupon'
 import { createOrder } from '../../services/order'
 import { isLoggedIn } from '../../store/auth'
 import type {
@@ -9,6 +10,7 @@ import type {
   CheckoutPreview,
   CreateOrderPayload,
   OrderItem,
+  UserCoupon,
 } from '../../types/api'
 import { formatPrice } from '../../utils/format'
 
@@ -27,6 +29,13 @@ interface PreviewView {
   payableText: string
   freeShippingText: string
   hasDiscount: boolean
+  couponName: string
+  discountLabel: string
+}
+
+interface CouponView extends UserCoupon {
+  valueText: string
+  conditionText: string
 }
 
 function newRequestNo(): string {
@@ -48,6 +57,13 @@ Page({
     skuId: 0,
     quantity: 1,
     requestNo: '',
+    invoiceRequired: false,
+    invoiceTitle: '',
+    invoiceTaxNo: '',
+    invoiceEmail: '',
+    coupons: [] as CouponView[],
+    selectedCouponId: 0,
+    couponDiscountText: '',
   },
 
   onLoad(options: Record<string, string | undefined>) {
@@ -78,6 +94,16 @@ Page({
       this.setData({ requestNo: newRequestNo() })
     }
     void this.loadAddresses()
+    void this.loadCoupons()
+  },
+
+  async loadCoupons() {
+    try {
+      const coupons = await listMyCoupons('UNUSED')
+      this.setData({ coupons: coupons.map((coupon) => this.toCouponView(coupon)) })
+    } catch {
+      this.setData({ coupons: [] })
+    }
   },
 
   async loadAddresses() {
@@ -139,6 +165,7 @@ Page({
         addressId,
         source: 'CART',
         cartItemIds: this.data.cartItemIds,
+        couponId: this.data.selectedCouponId || undefined,
       }
     }
     if (!this.data.skuId) {
@@ -149,6 +176,7 @@ Page({
       source: 'BUY_NOW',
       skuId: this.data.skuId,
       quantity: this.data.quantity,
+      couponId: this.data.selectedCouponId || undefined,
     }
   },
 
@@ -171,7 +199,42 @@ Page({
       freeShippingText:
         threshold > 0 ? `满 ${formatPrice(preview.freeShippingThreshold)} 包邮` : '全场包邮',
       hasDiscount: discount > 0,
+      couponName: preview.couponName || '',
+      discountLabel: preview.couponName ? `优惠（${preview.couponName}）` : '优惠',
     }
+  },
+
+  toCouponView(coupon: UserCoupon): CouponView {
+    return {
+      ...coupon,
+      valueText: coupon.type === 'FIXED'
+        ? `¥${Number(coupon.value).toFixed(0)}`
+        : `${Number(coupon.value).toFixed(0)}%`,
+      conditionText: Number(coupon.minAmount) > 0
+        ? `满 ${Number(coupon.minAmount).toFixed(0)} 元可用`
+        : '无门槛',
+    }
+  },
+
+  selectCoupon(event: WechatMiniprogram.TouchEvent) {
+    const id = Number(event.currentTarget.dataset.id)
+    if (id === this.data.selectedCouponId) {
+      return
+    }
+    this.setData({ selectedCouponId: id })
+    void this.loadPreview(this.data.selectedAddressId)
+  },
+
+  clearCoupon() {
+    if (!this.data.selectedCouponId) {
+      return
+    }
+    this.setData({ selectedCouponId: 0 })
+    void this.loadPreview(this.data.selectedAddressId)
+  },
+
+  goCoupons() {
+    wx.navigateTo({ url: '/pages/coupons/index' })
   },
 
   chooseAddress() {
@@ -221,9 +284,23 @@ Page({
       return
     }
 
+    if (this.data.invoiceRequired) {
+      if (!this.data.invoiceTitle.trim()) {
+        wx.showToast({ title: '请填写发票抬头', icon: 'none' })
+        return
+      }
+      if (!this.data.invoiceEmail.trim()) {
+        wx.showToast({ title: '请填写发票邮箱', icon: 'none' })
+        return
+      }
+    }
     const orderPayload: CreateOrderPayload = {
       ...payload,
       clientRequestNo: this.data.requestNo,
+      invoiceRequired: this.data.invoiceRequired,
+      invoiceTitle: this.data.invoiceRequired ? this.data.invoiceTitle.trim() : undefined,
+      invoiceTaxNo: this.data.invoiceRequired ? this.data.invoiceTaxNo.trim() : undefined,
+      invoiceEmail: this.data.invoiceRequired ? this.data.invoiceEmail.trim() : undefined,
     }
     this.setData({ submitting: true })
     try {
@@ -241,6 +318,22 @@ Page({
     } finally {
       this.setData({ submitting: false })
     }
+  },
+
+  onInvoiceToggle(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    this.setData({ invoiceRequired: event.detail.value })
+  },
+
+  onInvoiceTitleInput(event: WechatMiniprogram.Input) {
+    this.setData({ invoiceTitle: event.detail.value })
+  },
+
+  onInvoiceTaxInput(event: WechatMiniprogram.Input) {
+    this.setData({ invoiceTaxNo: event.detail.value })
+  },
+
+  onInvoiceEmailInput(event: WechatMiniprogram.Input) {
+    this.setData({ invoiceEmail: event.detail.value })
   },
 
   goLogin() {

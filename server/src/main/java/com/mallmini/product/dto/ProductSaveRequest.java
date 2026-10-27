@@ -34,6 +34,8 @@ public record ProductSaveRequest(
 
         List<ProductImageItem> images,
 
+        Long shippingTemplateId,
+
         @NotEmpty(message = "至少需要一个 SKU")
         List<SkuSaveItem> skus
 ) {

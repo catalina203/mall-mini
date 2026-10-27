@@ -253,3 +253,62 @@
   color: #ffffff;
   background: #e5a99b;
 }
+
+
+.review-entry {
+  gap: 12rpx;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-link {
+  color: #d9482b;
+  font-size: 23rpx;
+}
+
+.review-summary {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.review-score {
+  color: #d9482b;
+  font-family: Georgia, serif;
+  font-size: 48rpx;
+}
+
+.review-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.review-stars {
+  color: #f59e0b;
+  font-size: 24rpx;
+  letter-spacing: 2rpx;
+}
+
+.review-count {
+  color: #9ca3af;
+  font-size: 21rpx;
+}
+
+.favorite-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 100rpx;
+  padding: 0 18rpx;
+  color: #6b7280;
+  font-size: 23rpx;
+}
+
+.favorite-active {
+  color: #d9482b;
+}

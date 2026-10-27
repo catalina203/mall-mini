@@ -4,6 +4,7 @@ import { isLoggedIn } from '../../store/auth'
 import type { OrderDetail, OrderItem, OrderStatus, OrderStatusLog, PaymentConfig } from '../../types/api'
 import { formatDateTime, formatPrice } from '../../utils/format'
 import { orderStatusClass, orderStatusText } from '../../utils/order'
+import { afterSaleStatusText } from '../../utils/after-sale'
 
 interface ItemView extends OrderItem {
   priceText: string
@@ -39,6 +40,14 @@ interface OrderView {
   cancelledAtText: string
   cancelReason: string
   logs: LogView[]
+  afterSaleNo: string
+  afterSaleText: string
+  canApplyAfterSale: boolean
+  canChangeAddress: boolean
+  invoiceRequired: boolean
+  invoiceTitle: string
+  invoiceTaxNo: string
+  invoiceEmail: string
 }
 
 Page({
@@ -51,6 +60,12 @@ Page({
     error: '',
     detail: null as OrderView | null,
     paymentConfig: null as PaymentConfig | null,
+  },
+
+  onShow() {
+    if (this.data.loggedIn && this.data.orderNo && this.data.detail) {
+      void this.load()
+    }
   },
 
   onLoad(options: Record<string, string | undefined>) {
@@ -192,13 +207,15 @@ Page({
 
   toView(order: OrderDetail): OrderView {
     const shipping = Number(order.shippingFee)
+    const refunded = order.paymentStatus === 'REFUNDED'
+    const partialRefunded = order.paymentStatus === 'PARTIALLY_REFUNDED'
     return {
       orderNo: order.orderNo,
       status: order.status,
-      statusText: orderStatusText(order.status),
-      statusClass: orderStatusClass(order.status),
+      statusText: refunded ? '已退款' : partialRefunded ? '部分退款' : orderStatusText(order.status),
+      statusClass: refunded ? 'status-refunded' : orderStatusClass(order.status),
       statusNote: this.statusNote(order),
-      paymentText: order.paymentStatus === 'PAID' ? '已支付' : order.paymentStatus === 'REFUNDED' ? '已退款' : '未支付',
+      paymentText: this.paymentText(order.paymentStatus),
       goodsText: formatPrice(order.goodsAmount),
       shippingText: shipping <= 0 ? '免运费' : formatPrice(order.shippingFee),
       discountText: formatPrice(order.discountAmount),
@@ -224,10 +241,81 @@ Page({
         toText: orderStatusText(log.toStatus),
         createdText: formatDateTime(log.createdAt),
       })),
+      afterSaleNo: order.afterSaleNo || '',
+      afterSaleText: afterSaleStatusText(order.afterSaleStatus),
+      canApplyAfterSale:
+        order.paymentStatus === 'PAID' &&
+        !order.afterSaleNo &&
+        (order.status === 'PENDING_SHIPMENT' ||
+          order.status === 'PENDING_RECEIPT' ||
+          order.status === 'COMPLETED'),
+      canChangeAddress:
+        order.status === 'PENDING_SHIPMENT' &&
+        !order.afterSaleNo &&
+        (order.paymentStatus === 'PAID' || order.paymentStatus === 'PARTIALLY_REFUNDED'),
+      invoiceRequired: order.invoiceRequired,
+      invoiceTitle: order.invoiceTitle,
+      invoiceTaxNo: order.invoiceTaxNo,
+      invoiceEmail: order.invoiceEmail,
     }
   },
 
+  paymentText(paymentStatus: string): string {
+    switch (paymentStatus) {
+      case 'PAID':
+        return '已支付'
+      case 'PARTIALLY_REFUNDED':
+        return '部分退款'
+      case 'REFUNDED':
+        return '已退款'
+      default:
+        return '未支付'
+    }
+  },
+
+  applyAfterSale() {
+    if (!this.data.orderNo) {
+      return
+    }
+    wx.navigateTo({ url: `/pages/after-sale-apply/index?orderNo=${this.data.orderNo}` })
+  },
+
+  reviewItem(event: WechatMiniprogram.TouchEvent) {
+    const orderItemId = Number(event.currentTarget.dataset.orderItemId)
+    const productName = String(event.currentTarget.dataset.productName ?? '')
+    if (!orderItemId) {
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/review-edit/index?orderNo=${this.data.orderNo}&orderItemId=${orderItemId}&productName=${encodeURIComponent(productName)}`,
+    })
+  },
+
+  changeAddress() {
+    if (!this.data.orderNo) {
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/address-list/index?selectForOrder=${this.data.orderNo}`,
+    })
+  },
+
+  openAfterSale() {
+    if (!this.data.detail?.afterSaleNo) {
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/after-sale-detail/index?afterSaleNo=${this.data.detail.afterSaleNo}`,
+    })
+  },
+
   statusNote(order: OrderDetail): string {
+    if (order.paymentStatus === 'REFUNDED') {
+      return '订单已退款，如有疑问可在售后记录中查看。'
+    }
+    if (order.paymentStatus === 'PARTIALLY_REFUNDED') {
+      return '订单已部分退款，剩余商品按原流程履约。'
+    }
     switch (order.status) {
       case 'PENDING_PAYMENT':
         return '订单待付款。'

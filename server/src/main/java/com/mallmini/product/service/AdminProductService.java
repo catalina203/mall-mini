@@ -9,6 +9,8 @@ import com.mallmini.category.mapper.CategoryMapper;
 import com.mallmini.common.api.PageResult;
 import com.mallmini.common.exception.BusinessException;
 import com.mallmini.common.exception.ErrorCode;
+import com.mallmini.inventory.enums.StockChangeType;
+import com.mallmini.inventory.service.StockService;
 import com.mallmini.order.entity.MallOrderItem;
 import com.mallmini.order.mapper.MallOrderItemMapper;
 import com.mallmini.product.dto.ProductSaveRequest;
@@ -50,6 +52,7 @@ public class AdminProductService {
     private final SpecJsonParser specJsonParser;
     private final ObjectMapper objectMapper;
     private final AdminOperationLogger operationLogger;
+    private final StockService stockService;
 
     public PageResult<AdminProductSummaryVO> page(long page,
                                                   long pageSize,
@@ -136,7 +139,9 @@ public class AdminProductService {
 
         replaceImages(product.getId(), request.images());
         for (ProductSaveRequest.SkuSaveItem item : request.skus()) {
-            insertSku(product.getId(), item);
+            ProductSku sku = insertSku(product.getId(), item);
+            stockService.recordProductChange(sku, 0, sku.getStock() == null ? 0 : sku.getStock(),
+                    StockChangeType.PRODUCT_INIT, adminId, "创建商品初始库存");
         }
 
         operationLogger.log(adminId, "PRODUCT_CREATE", "PRODUCT", String.valueOf(product.getId()), product.getName());
@@ -158,7 +163,7 @@ public class AdminProductService {
         productMapper.updateById(product);
 
         replaceImages(product.getId(), request.images());
-        syncSkus(product.getId(), request.skus());
+        syncSkus(product.getId(), request.skus(), adminId);
 
         operationLogger.log(adminId, "PRODUCT_UPDATE", "PRODUCT", String.valueOf(id), product.getName());
         return toDetail(product);
@@ -186,12 +191,7 @@ public class AdminProductService {
         if (stock == null || stock < 0) {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR, "库存不能为负");
         }
-        ProductSku sku = productSkuMapper.selectById(skuId);
-        if (sku == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "SKU 不存在");
-        }
-        sku.setStock(stock);
-        productSkuMapper.updateById(sku);
+        stockService.adjust(skuId, stock, adminId, "后台调整库存");
         operationLogger.log(adminId, "SKU_STOCK", "SKU", String.valueOf(skuId), String.valueOf(stock));
     }
 
@@ -208,7 +208,7 @@ public class AdminProductService {
         operationLogger.log(adminId, "PRODUCT_DELETE", "PRODUCT", String.valueOf(id), product.getName());
     }
 
-    private void syncSkus(Long productId, List<ProductSaveRequest.SkuSaveItem> items) {
+    private void syncSkus(Long productId, List<ProductSaveRequest.SkuSaveItem> items, Long adminId) {
         Map<Long, ProductSku> existing = productSkuMapper.selectList(new LambdaQueryWrapper<ProductSku>()
                         .eq(ProductSku::getProductId, productId))
                 .stream()
@@ -221,11 +221,18 @@ public class AdminProductService {
                 if (sku == null) {
                     throw new BusinessException(ErrorCode.VALIDATION_ERROR, "SKU 不属于当前商品");
                 }
+                int before = sku.getStock() == null ? 0 : sku.getStock();
                 applySku(sku, item);
                 productSkuMapper.updateById(sku);
+                stockService.recordProductChange(sku, before,
+                        sku.getStock() == null ? 0 : sku.getStock(),
+                        StockChangeType.MANUAL_ADJUST, adminId, "编辑商品调整库存");
                 retainedIds.add(sku.getId());
             } else {
-                insertSku(productId, item);
+                ProductSku sku = insertSku(productId, item);
+                stockService.recordProductChange(sku, 0,
+                        sku.getStock() == null ? 0 : sku.getStock(),
+                        StockChangeType.PRODUCT_INIT, adminId, "新增 SKU 初始库存");
             }
         }
 
@@ -268,13 +275,15 @@ public class AdminProductService {
         product.setMainImage(request.mainImage() == null ? "" : request.mainImage().trim());
         product.setSortOrder(request.sortOrder() == null ? 0 : request.sortOrder());
         product.setStatus(status.name());
+        product.setShippingTemplateId(request.shippingTemplateId());
     }
 
-    private void insertSku(Long productId, ProductSaveRequest.SkuSaveItem item) {
+    private ProductSku insertSku(Long productId, ProductSaveRequest.SkuSaveItem item) {
         ProductSku sku = new ProductSku();
         sku.setProductId(productId);
         applySku(sku, item);
         productSkuMapper.insert(sku);
+        return sku;
     }
 
     private void applySku(ProductSku sku, ProductSaveRequest.SkuSaveItem item) {
@@ -362,6 +371,7 @@ public class AdminProductService {
                 product.getMainImage(),
                 product.getStatus(),
                 product.getSortOrder(),
+                product.getShippingTemplateId(),
                 images,
                 skus);
     }

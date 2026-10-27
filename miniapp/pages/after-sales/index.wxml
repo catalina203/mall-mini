@@ -1,0 +1,70 @@
+<view class="page after-sales-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后查看售后记录</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <block wx:else>
+    <scroll-view scroll-x class="tabs" enhanced show-scrollbar="{{false}}">
+      <view
+        wx:for="{{tabs}}"
+        wx:key="value"
+        class="tab {{activeStatus == item.value ? 'tab-active' : ''}}"
+        data-status="{{item.value}}"
+        bindtap="switchStatus"
+      >
+        {{item.label}}
+      </view>
+    </scroll-view>
+
+    <view wx:if="{{loading}}" class="state">
+      <text>正在加载…</text>
+    </view>
+
+    <view wx:elif="{{error}}" class="state">
+      <text>{{error}}</text>
+      <button size="mini" bindtap="retry">重试</button>
+    </view>
+
+    <block wx:else>
+      <view wx:if="{{records.length}}" class="list">
+        <view
+          wx:for="{{records}}"
+          wx:key="afterSaleNo"
+          class="record-card"
+          data-after-sale-no="{{item.afterSaleNo}}"
+          bindtap="openDetail"
+        >
+          <view class="record-head">
+            <view class="record-title">
+              <text class="type">{{item.typeText}}</text>
+              <text class="record-no">{{item.afterSaleNo}}</text>
+            </view>
+            <text class="status {{item.statusClass}}">{{item.statusText}}</text>
+          </view>
+          <view class="record-body">
+            <fallback-image class="thumb" src="{{item.firstProductImage}}" />
+            <view class="record-info">
+              <text class="product-name">{{item.firstProductName}}</text>
+              <text class="meta">订单 {{item.orderNo}}</text>
+              <text class="meta">共 {{item.totalQuantity}} 件 · {{item.createdAtText}}</text>
+            </view>
+            <text class="amount">{{item.amountText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view wx:else class="state">
+        <text>{{activeStatus ? '该状态下暂无售后记录' : '暂无售后记录'}}</text>
+        <text class="state-hint">需要退款或退货时，可在订单详情发起申请</text>
+        <button size="mini" class="primary" bindtap="goOrders">查看订单</button>
+      </view>
+
+      <view wx:if="{{records.length}}" class="footer">
+        <text wx:if="{{loadingMore}}">正在加载更多…</text>
+        <text wx:elif="{{hasMore}}">上拉加载更多</text>
+        <text wx:else>没有更多了</text>
+      </view>
+    </block>
+  </block>
+</view>

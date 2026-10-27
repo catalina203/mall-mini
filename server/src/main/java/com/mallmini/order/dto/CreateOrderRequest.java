@@ -1,5 +1,6 @@
 package com.mallmini.order.dto;
 
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -30,6 +31,20 @@ public record CreateOrderRequest(
         String clientRequestNo,
 
         @Size(max = 255, message = "备注过长")
-        String remark
+        String remark,
+
+        Boolean invoiceRequired,
+
+        @Size(max = 128, message = "发票抬头过长")
+        String invoiceTitle,
+
+        @Size(max = 64, message = "税号过长")
+        String invoiceTaxNo,
+
+        @Email(message = "邮箱格式不正确")
+        @Size(max = 128, message = "邮箱过长")
+        String invoiceEmail,
+
+        Long couponId
 ) {
 }

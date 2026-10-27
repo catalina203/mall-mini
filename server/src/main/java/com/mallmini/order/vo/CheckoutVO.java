@@ -10,6 +10,8 @@ public record CheckoutVO(
         BigDecimal discountAmount,
         BigDecimal shippingFee,
         BigDecimal payableAmount,
-        BigDecimal freeShippingThreshold
+        BigDecimal freeShippingThreshold,
+        Long couponId,
+        String couponName
 ) {
 }

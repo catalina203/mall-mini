@@ -1,7 +1,9 @@
 package com.mallmini.admin.controller;
 
 import com.mallmini.admin.dto.AdminLoginRequest;
+import com.mallmini.admin.dto.AdminPasswordChangeRequest;
 import com.mallmini.admin.service.AdminAuthService;
+import com.mallmini.admin.service.AdminManagementService;
 import com.mallmini.admin.vo.AdminTokenVO;
 import com.mallmini.admin.vo.AdminVO;
 import com.mallmini.common.api.ApiResponse;
@@ -25,6 +27,7 @@ public class AdminAuthController {
     private static final int LOGIN_LIMIT_PER_MINUTE = 10;
 
     private final AdminAuthService adminAuthService;
+    private final AdminManagementService adminManagementService;
     private final RateLimitService rateLimitService;
 
     @PostMapping("/auth/login")
@@ -37,5 +40,12 @@ public class AdminAuthController {
     @GetMapping("/me")
     public ApiResponse<AdminVO> me(@AuthenticationPrincipal AuthUser authUser) {
         return ApiResponse.ok(adminAuthService.me(authUser.id()));
+    }
+
+    @PostMapping("/auth/password")
+    public ApiResponse<Void> changePassword(@AuthenticationPrincipal AuthUser authUser,
+                                            @Valid @RequestBody AdminPasswordChangeRequest request) {
+        adminManagementService.changePassword(authUser.id(), request.oldPassword(), request.newPassword());
+        return ApiResponse.ok();
     }
 }

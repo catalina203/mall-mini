@@ -1,0 +1,99 @@
+<view class="page apply-page">
+  <view wx:if="{{!loggedIn}}" class="state">
+    <text>登录后申请售后</text>
+    <button size="mini" class="primary" bindtap="goLogin">去登录</button>
+  </view>
+
+  <view wx:elif="{{loading}}" class="state">
+    <text>正在加载…</text>
+  </view>
+
+  <view wx:elif="{{error}}" class="state">
+    <text>{{error}}</text>
+    <button size="mini" bindtap="load">重试</button>
+  </view>
+
+  <block wx:else>
+    <view class="order-bar">
+      <text>订单号</text>
+      <text class="mono">{{orderNo}}</text>
+    </view>
+
+    <view class="card">
+      <text class="card-title">售后类型</text>
+      <view class="type-options">
+        <view
+          class="type-option {{type == 'REFUND_ONLY' ? 'active' : ''}}"
+          data-type="REFUND_ONLY"
+          bindtap="selectType"
+        >
+          <text class="type-name">仅退款</text>
+          <text class="type-desc">无需寄回商品，适合未发货或协商一致</text>
+        </view>
+        <view
+          class="type-option {{type == 'RETURN_REFUND' ? 'active' : ''}} {{canReturnRefund ? '' : 'disabled'}}"
+          data-type="RETURN_REFUND"
+          bindtap="selectType"
+        >
+          <text class="type-name">退货退款</text>
+          <text class="type-desc">寄回商品后退款，需填写退货物流</text>
+        </view>
+      </view>
+      <text wx:if="{{!canReturnRefund}}" class="type-hint">未发货订单只能申请仅退款</text>
+    </view>
+
+    <view class="card">
+      <text class="card-title">选择商品</text>
+      <view wx:for="{{items}}" wx:key="orderItemId" class="item">
+        <view
+          class="select-dot {{item.selected ? 'checked' : ''}}"
+          data-index="{{index}}"
+          bindtap="toggleItem"
+        ></view>
+        <fallback-image class="thumb" src="{{item.productImage}}" />
+        <view class="item-info">
+          <text class="item-name">{{item.productName}}</text>
+          <text class="item-spec">{{item.skuSpec}}</text>
+          <text class="item-price">{{item.priceText}}</text>
+        </view>
+        <view class="quantity">
+          <text class="step" data-index="{{index}}" data-delta="-1" bindtap="changeQuantity">-</text>
+          <text class="number">{{item.quantity}}</text>
+          <text class="step" data-index="{{index}}" data-delta="1" bindtap="changeQuantity">+</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="card-title">售后原因</text>
+      <picker mode="selector" range="{{reasons}}" value="{{reasonIndex}}" bindchange="onReasonChange">
+        <view class="picker-row">
+          <text>{{reasons[reasonIndex]}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </picker>
+      <textarea
+        class="textarea"
+        placeholder="补充说明（选填，最多 1000 字）"
+        value="{{description}}"
+        maxlength="1000"
+        auto-height
+        bindinput="onDescriptionInput"
+      />
+    </view>
+
+    <view class="submit-bar">
+      <view class="estimate">
+        <text>预计退款</text>
+        <text class="amount">{{estimatedRefund}}</text>
+        <text class="hint">共 {{selectedCount}} 件，最终以审核为准</text>
+      </view>
+      <button
+        class="submit-button"
+        bindtap="submit"
+        loading="{{submitting}}"
+        disabled="{{submitting || selectedCount == 0}}"
+      >提交申请</button>
+    </view>
+  </block>
+</view>

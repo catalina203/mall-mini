@@ -27,6 +27,7 @@ export interface ProductPayload {
   mainImage: string
   sortOrder: number
   status: string
+  shippingTemplateId?: number
   images: Array<{ url: string; sortOrder: number }>
   skus: ProductSkuPayload[]
 }

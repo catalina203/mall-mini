@@ -10,6 +10,18 @@
     "pages/order-detail/index",
     "pages/address-list/index",
     "pages/address-edit/index",
+    "pages/after-sales/index",
+    "pages/after-sale-apply/index",
+    "pages/after-sale-detail/index",
+    "pages/notifications/index",
+    "pages/coupons/index",
+    "pages/member/index",
+    "pages/support/index",
+    "pages/favorites/index",
+    "pages/history/index",
+    "pages/product-reviews/index",
+    "pages/review-edit/index",
+    "pages/agreement/index",
     "pages/profile/index"
   ],
   "window": {

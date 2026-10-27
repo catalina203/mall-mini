@@ -1,19 +1,25 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Download, Refresh, Search } from '@element-plus/icons-vue'
 import PageHeader from '@/components/PageHeader.vue'
 import {
   cancelOrder,
   fetchOrderDetail,
   fetchOrders,
   shipOrder,
+  updateOrderRemark,
 } from '@/api/orders'
 import type { AdminOrderDetail, AdminOrderSummary } from '@/types/admin'
+import { exportOrders } from '@/api/exports'
+import { useAuthStore } from '@/stores/auth'
+import { downloadBlob } from '@/utils/download'
 import { formatDateTime, formatPrice } from '@/utils/format'
 import { ORDER_STATUS_OPTIONS, orderStatusTagType, orderStatusText } from '@/utils/order'
 
+const auth = useAuthStore()
 const loading = ref(false)
+const exporting = ref(false)
 const detailLoading = ref(false)
 const saving = ref(false)
 const error = ref('')
@@ -27,6 +33,8 @@ const userId = ref<number | undefined>(undefined)
 
 const detailVisible = ref(false)
 const detail = ref<AdminOrderDetail | null>(null)
+const remarkDraft = ref('')
+const remarkSaving = ref(false)
 const shipVisible = ref(false)
 const shipForm = reactive({
   orderNo: '',
@@ -74,6 +82,7 @@ async function openDetail(row: AdminOrderSummary) {
   detail.value = null
   try {
     detail.value = await fetchOrderDetail(row.orderNo)
+    remarkDraft.value = detail.value.adminRemark || ''
   } catch (cause) {
     ElMessage.error(cause instanceof Error ? cause.message : '订单详情加载失败')
     detailVisible.value = false
@@ -114,6 +123,20 @@ async function submitShip() {
   }
 }
 
+async function saveRemark() {
+  if (!detail.value || remarkSaving.value) return
+  remarkSaving.value = true
+  try {
+    detail.value = await updateOrderRemark(detail.value.orderNo, remarkDraft.value)
+    ElMessage.success('后台备注已保存')
+    await load()
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : '备注保存失败')
+  } finally {
+    remarkSaving.value = false
+  }
+}
+
 async function cancel(row: AdminOrderSummary) {
   try {
     const { value } = await ElMessageBox.prompt('请输入取消原因', '取消订单', {
@@ -139,6 +162,24 @@ function changePage(value: number) {
   void load()
 }
 
+async function exportList() {
+  if (exporting.value) return
+  exporting.value = true
+  try {
+    const { blob, filename } = await exportOrders({
+      orderNo: orderNo.value.trim() || undefined,
+      status: status.value || undefined,
+      userId: userId.value || undefined,
+    })
+    downloadBlob(blob, filename)
+    ElMessage.success('导出已开始')
+  } catch (cause) {
+    ElMessage.error(cause instanceof Error ? cause.message : '导出失败')
+  } finally {
+    exporting.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -148,7 +189,16 @@ onMounted(load)
       eyebrow="TRANSACTIONS"
       title="订单管理"
       description="查看订单明细与状态流转，处理待发货订单。仅待发货可发货，仅待付款可取消。"
-    />
+    >
+      <template #actions>
+        <el-button
+          v-if="auth.can('EXPORT_READ')"
+          :icon="Download"
+          :loading="exporting"
+          @click="exportList"
+        >导出 CSV</el-button>
+      </template>
+    </PageHeader>
 
     <el-alert v-if="error" type="error" :closable="false" :title="error">
       <template #default>
@@ -199,11 +249,25 @@ onMounted(load)
               </div>
             </template>
           </el-table-column>
-          <el-table-column label="状态" width="110">
+          <el-table-column label="状态" width="130">
             <template #default="{ row }">
-              <el-tag :type="orderStatusTagType(row.status)" effect="light">
-                {{ orderStatusText(row.status) }}
-              </el-tag>
+              <div class="status-cell">
+                <el-tag :type="orderStatusTagType(row.status)" effect="light">
+                  {{ orderStatusText(row.status) }}
+                </el-tag>
+                <el-tag
+                  v-if="row.paymentStatus === 'REFUNDED'"
+                  type="danger"
+                  effect="plain"
+                  size="small"
+                >已退款</el-tag>
+                <el-tag
+                  v-else-if="row.paymentStatus === 'PARTIALLY_REFUNDED'"
+                  type="warning"
+                  effect="plain"
+                  size="small"
+                >部分退款</el-tag>
+              </div>
             </template>
           </el-table-column>
           <el-table-column label="金额" width="120">
@@ -283,6 +347,35 @@ onMounted(load)
               <strong>{{ detail.logisticsCompany || '尚未发货' }}</strong>
               <span>{{ detail.logisticsNo || '—' }}</span>
               <span class="detail-remark">{{ detail.remark || '无订单备注' }}</span>
+              <span v-if="detail.afterSaleNo" class="detail-remark">
+                售后 {{ detail.afterSaleNo }} · {{ detail.afterSaleStatus }}
+              </span>
+            </section>
+          </div>
+
+          <div class="detail-grid">
+            <section class="detail-card">
+              <p class="detail-label">发票信息</p>
+              <strong>{{ detail.invoiceRequired ? detail.invoiceTitle : '未申请发票' }}</strong>
+              <span v-if="detail.invoiceRequired">税号：{{ detail.invoiceTaxNo || '个人/无' }}</span>
+              <span v-if="detail.invoiceRequired">邮箱：{{ detail.invoiceEmail }}</span>
+              <span v-if="!detail.invoiceRequired">用户下单时未勾选发票</span>
+            </section>
+            <section class="detail-card">
+              <p class="detail-label">后台备注</p>
+              <el-input
+                v-model="remarkDraft"
+                type="textarea"
+                :rows="3"
+                maxlength="255"
+                show-word-limit
+                placeholder="仅后台可见，例如：已联系客户、加急发货"
+              />
+              <div class="remark-actions">
+                <el-button size="small" type="primary" :loading="remarkSaving" @click="saveRemark">
+                  保存备注
+                </el-button>
+              </div>
             </section>
           </div>
 
@@ -384,6 +477,12 @@ onMounted(load)
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
+}
+
+.status-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .amount {
@@ -489,6 +588,12 @@ onMounted(load)
   padding-top: 6px;
   margin-top: 4px;
   border-top: 1px dashed var(--mall-line);
+}
+
+.remark-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
 }
 
 .detail-section {

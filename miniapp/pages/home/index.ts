@@ -14,6 +14,8 @@ interface HomeView {
   banners: Banner[]
   categories: Category[]
   recommendedProducts: ProductCard[]
+  newProducts: ProductCard[]
+  hotProducts: ProductCard[]
 }
 
 Page({
@@ -35,20 +37,14 @@ Page({
     this.setData({ loading: true, error: '' })
     try {
       const home: HomeData = await getHome()
-      const recommendedProducts = home.recommendedProducts.map((product) => ({
-        ...product,
-        priceText:
-          product.minPrice === product.maxPrice
-            ? formatPrice(product.minPrice)
-            : `${formatPrice(product.minPrice)}起`,
-        stockText: product.totalStock > 0 ? `库存 ${product.totalStock}` : '暂时缺货',
-      }))
       this.setData({
         loading: false,
         home: {
           banners: home.banners,
           categories: home.categories.slice(0, 8),
-          recommendedProducts,
+          recommendedProducts: home.recommendedProducts.map((product) => this.toCard(product)),
+          newProducts: (home.newProducts ?? []).map((product) => this.toCard(product)),
+          hotProducts: (home.hotProducts ?? []).map((product) => this.toCard(product)),
         },
       })
     } catch (error) {
@@ -57,6 +53,31 @@ Page({
         error: error instanceof Error ? error.message : '首页加载失败',
       })
     }
+  },
+
+  toCard(product: ProductSummary): ProductCard {
+    return {
+      ...product,
+      priceText:
+        product.minPrice === product.maxPrice
+          ? formatPrice(product.minPrice)
+          : `${formatPrice(product.minPrice)}起`,
+      stockText: product.totalStock > 0
+        ? (product.salesCount > 0 ? `已售 ${product.salesCount}` : `库存 ${product.totalStock}`)
+        : '暂时缺货',
+    }
+  },
+
+  openCoupons() {
+    wx.navigateTo({ url: '/pages/coupons/index' })
+  },
+
+  openSupport() {
+    wx.navigateTo({ url: '/pages/support/index' })
+  },
+
+  openMember() {
+    wx.switchTab({ url: '/pages/profile/index' })
   },
 
   openProduct(event: WechatMiniprogram.CustomEvent<{ id: number }>) {

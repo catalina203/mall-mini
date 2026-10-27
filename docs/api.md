@@ -86,13 +86,15 @@
 
 `GET /api/v1/home`
 
-返回启用的轮播图、一级分类、推荐/新品商品（首版取上架商品按排序与创建时间）。
+返回启用的轮播图、一级分类、推荐商品、新品上架与热销榜单。
 
 ```json
 {
   "banners": [{ "id": 1, "title": "", "imageUrl": "", "linkType": "PRODUCT", "linkTarget": "1" }],
   "categories": [{ "id": 1, "name": "数码", "iconUrl": "" }],
-  "recommendedProducts": [{ "id": 1, "name": "样例商品", "mainImage": "", "minPrice": "99.00" }]
+  "recommendedProducts": [{ "id": 1, "name": "样例商品", "mainImage": "", "minPrice": "99.00" }],
+  "newProducts": [],
+  "hotProducts": []
 }
 ```
 
@@ -114,10 +116,15 @@
 | page / pageSize | 分页 |
 | categoryId | 分类（含子分类） |
 | keyword | 名称/副标题模糊搜索 |
-| sort | `new`（默认）/ `price_asc` / `price_desc` |
+| sort | `new`（默认）/ `sales` / `price_asc` / `price_desc` |
 | minPrice / maxPrice | 可选价格区间 |
 
-仅返回 `ON_SALE` 且至少一个有效 SKU 的商品；返回 `minPrice`、`maxPrice`、`totalStock`。
+仅返回 `ON_SALE` 且至少一个有效 SKU 的商品；返回 `minPrice`、`maxPrice`、`totalStock`、`salesCount`。关键词使用 ngram 全文索引 + LIKE 兜底，第一页搜索会记录热词。
+
+### 2.5.1 搜索热词
+
+- `GET /api/v1/search/hot?limit=10`
+- `POST /api/v1/search/keywords` `{ "keyword": "耳机" }`
 
 ### 2.6 商品详情
 
@@ -248,7 +255,7 @@
 或立即购买：
 
 ```json
-{ "addressId": 1, "source": "BUY_NOW", "skuId": 1, "quantity": 2 }
+{ "addressId": 1, "source": "BUY_NOW", "skuId": 1, "quantity": 2, "couponId": null }
 ```
 
 响应含商品明细、商品金额、运费、优惠（0）、应付金额、地址有效性警告、不可购买原因列表。**仅预览，不扣库存。**
@@ -263,11 +270,17 @@
   "source": "CART",
   "cartItemIds": [1, 2],
   "clientRequestNo": "uuid-由客户端生成",
-  "remark": ""
+  "remark": "",
+  "invoiceRequired": false,
+  "invoiceTitle": "",
+  "invoiceTaxNo": "",
+  "invoiceEmail": "",
+  "couponId": null
 }
 ```
 
-- 服务端重算价格与运费，条件扣减库存，写订单/明细/状态日志，删除对应购物车项。
+- 服务端重算价格、运费与优惠券，条件扣减库存，写订单/明细/状态日志，删除对应购物车项。
+- 使用优惠券时服务端校验归属、有效期、门槛、范围，并在订单创建成功后条件锁定；取消/超时取消释放。
 - 全部在同一事务；任一 SKU 库存不足整单失败。
 - 相同 `clientRequestNo` 重复提交：顺序重复直接返回已创建订单（HTTP 200）；并发竞态由唯一索引拦截并返回 409 `CONFLICT`，不会重复扣库存或创建订单。
 - 响应：`{ orderNo, status, payableAmount, createdAt, ... }`（完整订单详情结构）。
@@ -277,7 +290,7 @@
 - `GET /api/v1/me/orders?status=&page=&pageSize=`
 - `GET /api/v1/me/orders/{orderNo}`
 
-详情含明细快照、地址快照、金额、状态时间、物流信息、状态日志（可选返回）。
+详情含明细快照、地址快照、金额、状态时间、物流信息、发票信息、状态日志与售后状态。用户响应中的 `adminRemark` 始终为空。
 
 ### 6.4 取消订单
 
@@ -295,7 +308,17 @@
 
 仅 `PENDING_RECEIPT` 可操作。
 
-### 6.6 模拟支付（仅 dev）
+### 6.6 修改收货地址
+
+`POST /api/v1/me/orders/{orderNo}/address`
+
+```json
+{ "addressId": 2 }
+```
+
+仅 `PENDING_SHIPMENT`、已支付且无进行中售后的订单可修改；更新订单地址快照并写状态日志。已发货订单不能直接改地址。
+
+### 6.7 模拟支付（仅 dev）
 
 `GET /api/v1/payment/config`（公开）
 
@@ -321,11 +344,112 @@
 - 生产或未启用网关返回 `PAYMENT_DISABLED`；支付渠道失败返回 `PAYMENT_FAILED`。
 - 真实微信支付与回调尚未实现，接入时必须验签、校验商户订单号/金额/交易状态并幂等处理。
 
+### 6.8 售后（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/v1/me/orders/{orderNo}/after-sales` | 发起售后 |
+| GET | `/api/v1/me/after-sales?status=&page=&pageSize=` | 我的售后列表 |
+| GET | `/api/v1/me/after-sales/{afterSaleNo}` | 售后详情 |
+| POST | `/api/v1/me/after-sales/{afterSaleNo}/cancel` | 取消售后（仅待审核/待退款/待退货） |
+| POST | `/api/v1/me/after-sales/{afterSaleNo}/return-shipment` | 填写退货物流（仅待退货） |
+
+发起售后请求：
+
+```json
+{
+  "type": "REFUND_ONLY",
+  "reason": "不想要了",
+  "description": "可选",
+  "items": [{ "orderItemId": 18, "quantity": 1 }]
+}
+```
+
+规则：
+
+- 订单必须已支付，且状态为待发货/待收货/已完成；
+- 未发货订单只能 `REFUND_ONLY`；
+- 同一订单只允许一个进行中的售后；
+- 退款金额由服务端按订单明细计算；整单退款按实付金额（含运费），部分退款按明细成交金额，运费不退；
+- 客户端不能提交退款金额或目标状态。
+
+### 6.9 优惠券（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/me/coupons?status=` | 我的优惠券 |
+| GET | `/api/v1/me/coupons/claimable` | 可领取模板 |
+| POST | `/api/v1/me/coupons/{templateId}/claim` | 领取 |
+
+首版每人每模板限领 1 张；领取使用模板计数条件更新，避免超发。结算预览/创建订单传 `couponId`，折扣由服务端计算。
+
+### 6.10 商品评价（公开 + USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/v1/me/orders/{orderNo}/reviews` | 评价订单明细 |
+| GET | `/api/v1/products/{productId}/reviews?page=&pageSize=` | 公开评价（仅审核通过） |
+| GET | `/api/v1/products/{productId}/reviews/summary` | 平均分与数量 |
+
+评价请求：`{ orderItemId, rating(1-5), content, anonymous }`。仅已完成订单、且每个订单明细只能评价一次。
+
+### 6.11 收藏与浏览足迹（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST/DELETE | `/api/v1/me/favorites/{productId}` | 收藏/取消收藏 |
+| GET | `/api/v1/me/favorites/{productId}/status` | 是否已收藏 |
+| GET | `/api/v1/me/favorites?page=&pageSize=` | 收藏列表 |
+| POST | `/api/v1/me/browse-history/{productId}` | 记录浏览 |
+| GET | `/api/v1/me/browse-history?page=&pageSize=` | 浏览足迹 |
+| DELETE | `/api/v1/me/browse-history` | 清空足迹 |
+
+### 6.12 会员积分（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/me/member` | 积分余额、累计积分、等级、下一等级 |
+| GET | `/api/v1/me/points/logs?page=&pageSize=` | 积分明细 |
+
+订单完成后按实付金额 1 元 = 1 积分；整单退款扣回对应积分。会员等级：银卡 100、金卡 500、钻石 2000。
+
+### 6.13 客服工单（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| POST | `/api/v1/me/support-tickets` | 提交工单 |
+| GET | `/api/v1/me/support-tickets` | 我的工单 |
+| GET | `/api/v1/me/support-tickets/{ticketNo}` | 详情 |
+| POST | `/api/v1/me/support-tickets/{ticketNo}/close` | 关闭 |
+
+提交字段：`orderNo? / type(ORDER|PRODUCT|REFUND|OTHER) / subject / content`。
+
+### 6.14 站内通知（需 USER）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/me/notifications?page=&pageSize=` | 我的通知 |
+| GET | `/api/v1/me/notifications/unread-count` | 未读数 |
+| POST | `/api/v1/me/notifications/{id}/read` | 标记已读 |
+
 ---
 
 ## 7. 管理后台接口（需 ADMIN）
 
 所有 `/api/v1/admin/**` 接口（除 `/admin/auth/login`）都需要 `role=ADMIN` 的 JWT。普通用户令牌返回 403。
+
+### 7.0 角色与权限
+
+| 角色 | 能力 |
+| --- | --- |
+| `SUPER_ADMIN` | 全部权限，包括管理员管理、操作日志、CSV 导出 |
+| `OPERATOR` | 商品/分类/轮播图、订单、售后、库存、用户状态、导出；无管理员管理与审计 |
+| `CUSTOMER_SERVICE` | 仪表盘、订单查看/备注、售后审核、用户查看、通知；无退款、库存调整、导出 |
+| `WAREHOUSE` | 仪表盘、订单查看/发货、售后查看、库存查看/调整、通知 |
+
+- 权限在后端通过 `@PreAuthorize` 校验，前端菜单隐藏只是体验层。
+- 管理员改角色、禁用或重置密码会递增 `token_version`，旧 JWT 立即失效。
+- 权限码：`DASHBOARD_READ / PRODUCT_READ / PRODUCT_WRITE / CATEGORY_READ / CATEGORY_WRITE / BANNER_READ / BANNER_WRITE / COUPON_READ / COUPON_WRITE / REVIEW_READ / REVIEW_WRITE / ORDER_READ / ORDER_WRITE / ORDER_SHIP / ORDER_CANCEL / AFTER_SALE_READ / AFTER_SALE_REVIEW / AFTER_SALE_REFUND / STOCK_READ / STOCK_ADJUST / USER_READ / USER_STATUS / NOTIFICATION_READ / SUPPORT_READ / SUPPORT_WRITE / ADMIN_MANAGE / AUDIT_READ / EXPORT_READ`。
 
 ### 7.1 管理员登录
 
@@ -335,7 +459,9 @@
 { "username": "admin", "password": "..." }
 ```
 
-响应：`{ token, admin: { id, username, displayName, role } }`。
+响应：`{ token, admin: { id, username, displayName, role, permissions } }`。
+
+`POST /api/v1/admin/auth/password`：修改自己的密码，成功后旧 JWT 失效。
 登录失败统一返回“用户名或密码错误”，不区分账号是否存在。登录接口限流。
 
 `GET /api/v1/admin/me`
@@ -421,6 +547,94 @@ GET/POST/PUT/DELETE `/api/v1/admin/banners`，PATCH `/{id}/status`。
 ### 7.9 管理员操作日志
 
 关键写操作（商品/分类/订单/用户/轮播图）记录 `admin_operation_log`，包含 requestId，不记录敏感内容。
+
+### 7.10 售后管理
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/after-sales?status=&afterSaleNo=&orderNo=&page=&pageSize=` | 分页 |
+| GET | `/api/v1/admin/after-sales/{afterSaleNo}` | 详情（商品、日志、退款记录） |
+| POST | `/api/v1/admin/after-sales/{afterSaleNo}/approve` | 审核通过 |
+| POST | `/api/v1/admin/after-sales/{afterSaleNo}/reject` | `{ reason }` |
+| POST | `/api/v1/admin/after-sales/{afterSaleNo}/confirm-return` | 确认收到退货 |
+| POST | `/api/v1/admin/after-sales/{afterSaleNo}/refund` | `{ manualRefundNo?, remark? }` |
+
+退款规则：
+
+- 仅退款需先审核通过；退货退款需先确认收到退货；
+- 退款失败状态可重试；
+- 开发环境使用 `MOCK` 退款；生产未接微信退款时，必须填写线下退款凭证（`MANUAL`）；
+- 退款成功后按整单/部分更新订单 `payment_status`，退货退款才回补库存；
+- 退款失败不会假装成功，详情中保留失败原因。
+
+### 7.11 库存中心
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/stock/logs?skuId=&bizNo=&changeType=&page=&pageSize=` | 库存流水 |
+| GET | `/api/v1/admin/stock/alerts?threshold=` | 低库存 SKU |
+| POST | `/api/v1/admin/stock/skus/{skuId}/adjust` | `{ stock, remark? }` |
+
+订单扣减、取消回补、售后退货回补、商品初始库存与手动调整都会写 `stock_log`；回补按 `(change_type, biz_no, sku_id)` 幂等。
+
+### 7.12 通知记录
+
+`GET /api/v1/admin/notification-logs?status=&templateCode=&page=&pageSize=`
+
+当前只投递站内通知（`IN_APP`）；微信订阅消息与短信渠道未接入，生产启用前需补充模板配置与发送适配器。
+
+### 7.13 管理员管理（仅 SUPER_ADMIN）
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/admins?keyword=&status=&page=&pageSize=` | 管理员列表 |
+| GET | `/api/v1/admin/admins/roles` | 角色码列表 |
+| POST | `/api/v1/admin/admins` | 新增管理员 |
+| PUT | `/api/v1/admin/admins/{id}` | 修改显示名称/角色 |
+| PATCH | `/api/v1/admin/admins/{id}/status` | 启用/禁用 |
+| POST | `/api/v1/admin/admins/{id}/reset-password` | 重置密码 |
+
+规则：不能禁用自己或修改自己的角色；必须至少保留一个启用的超级管理员。
+
+### 7.14 操作日志与导出
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/operation-logs?adminId=&action=&targetType=&page=&pageSize=` | 操作日志 |
+| GET | `/api/v1/admin/exports/orders?status=&orderNo=&userId=` | 订单 CSV |
+| GET | `/api/v1/admin/exports/users?keyword=&status=` | 用户 CSV（手机号脱敏） |
+| GET | `/api/v1/admin/exports/stock-logs?skuId=&bizNo=&changeType=` | 库存流水 CSV |
+
+导出需要 `EXPORT_READ`，单次最多 10000 行，写管理员操作日志。
+
+### 7.15 优惠券、运费模板与评价
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET/POST/PUT/DELETE | `/api/v1/admin/coupons` | 优惠券模板管理 |
+| PATCH | `/api/v1/admin/coupons/{id}/status` | 启停 |
+| GET/POST/PUT/DELETE | `/api/v1/admin/shipping-templates` | 运费模板与区域规则 |
+| GET | `/api/v1/admin/shipping-templates/options` | 商品绑定时下拉 |
+| GET | `/api/v1/admin/reviews?status=&productId=` | 评价列表 |
+| POST | `/api/v1/admin/reviews/{id}/approve|reject|reply` | 审核/回复 |
+
+商品保存请求新增可选 `shippingTemplateId`。
+
+### 7.16 客服工单与用户积分
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| GET | `/api/v1/admin/support-tickets?status=&type=&keyword=` | 工单列表 |
+| POST | `/api/v1/admin/support-tickets/{ticketNo}/reply` | 回复 |
+| POST | `/api/v1/admin/support-tickets/{ticketNo}/close` | 关闭 |
+| POST | `/api/v1/admin/users/{id}/points` | `{ delta, remark }` 调整积分 |
+
+权限：`SUPPORT_READ / SUPPORT_WRITE`；积分调整使用 `USER_STATUS`。
+
+### 7.17 订单备注与仪表盘
+
+- `PATCH /api/v1/admin/orders/{orderNo}/remark`：`{ remark }`，仅后台可见，需 `ORDER_WRITE`。
+- `GET /api/v1/admin/dashboard/summary?days=`：返回支付金额、退款金额、净收入、客单价、退款率、待发货/待收货/售后待处理/低库存、支付趋势。
 
 ---
 
