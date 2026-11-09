@@ -22,8 +22,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,13 +80,19 @@ fun ProductDetailScreen(
     val productState by viewModel.product.collectAsStateWithLifecycle()
     val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+    val favoriteStatus by viewModel.favoriteStatus.collectAsStateWithLifecycle()
+    val reviewSummary by viewModel.reviewSummary.collectAsStateWithLifecycle()
     val detail = productState.data
+    val isFavorite = favoriteStatus[productId] == true
 
     var selectedSkuId by remember(productId) { mutableLongStateOf(0L) }
     var quantity by remember(productId) { mutableIntStateOf(1) }
 
     LaunchedEffect(productId) {
         viewModel.loadProduct(productId, force = true)
+        viewModel.loadFavoriteStatus(productId)
+        viewModel.loadProductReviews(productId)
+        viewModel.recordProductHistory(productId)
     }
 
     LaunchedEffect(detail?.id, detail?.skus) {
@@ -99,6 +110,15 @@ fun ProductDetailScreen(
             title = "商品详情",
             subtitle = "Product",
             onBack = { navController.popBackStack() },
+            actions = {
+                IconButton(onClick = { viewModel.toggleFavorite(productId) }) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (isFavorite) "取消收藏" else "收藏",
+                        tint = if (isFavorite) Terracotta else Muted,
+                    )
+                }
+            },
         )
 
         when {
@@ -205,6 +225,30 @@ fun ProductDetailScreen(
                                             )
                                         }
                                     }
+                                }
+                            }
+                        }
+                        item {
+                            Surface(
+                                color = SurfaceWarm,
+                                shape = RoundedCornerShape(18.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { navController.navigate(Routes.productReviews(productId)) },
+                            ) {
+                                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("商品评价", style = MaterialTheme.typography.titleMedium, color = Ink)
+                                        Text(
+                                            "%.1f 分 · %d 条已审核评价".format(
+                                                reviewSummary?.averageRating ?: 0.0,
+                                                reviewSummary?.reviewCount ?: 0,
+                                            ),
+                                            color = Muted,
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                    }
+                                    Text("查看全部 ›", color = Terracotta, style = MaterialTheme.typography.labelLarge)
                                 }
                             }
                         }

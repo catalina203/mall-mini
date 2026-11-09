@@ -1,6 +1,7 @@
 package com.mallmini.android.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,7 +22,10 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -42,7 +46,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.mallmini.android.data.OrderDetail
+import com.mallmini.android.data.OrderItem
 import com.mallmini.android.ui.MallViewModel
+import com.mallmini.android.ui.Routes
+import com.mallmini.android.ui.components.EmptyContent
 import com.mallmini.android.ui.components.ErrorContent
 import com.mallmini.android.ui.components.LoadingContent
 import com.mallmini.android.ui.components.MallTopBar
@@ -72,13 +79,20 @@ fun OrderDetailScreen(
     val detailState by viewModel.orderDetail.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val paymentConfig by viewModel.paymentConfig.collectAsStateWithLifecycle()
+    val addresses by viewModel.addresses.collectAsStateWithLifecycle()
     var payDialog by remember { mutableStateOf(false) }
     var cancelDialog by remember { mutableStateOf(false) }
     var receiptDialog by remember { mutableStateOf(false) }
+    var addressDialog by remember { mutableStateOf(false) }
+    var reviewItem by remember { mutableStateOf<OrderItem?>(null) }
+    var reviewRating by remember { mutableStateOf(5) }
+    var reviewContent by remember { mutableStateOf("") }
+    var reviewAnonymous by remember { mutableStateOf(false) }
 
     LaunchedEffect(orderNo) {
         viewModel.loadOrderDetail(orderNo)
         viewModel.loadPaymentConfig()
+        viewModel.loadAddresses()
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -103,9 +117,41 @@ fun OrderDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item { StatusHero(detail) }
-                    item { AddressCard(detail) }
-                    item { ItemsCard(detail) }
+                    item {
+                        AddressCard(
+                            detail = detail,
+                            onChange = { addressDialog = true },
+                        )
+                    }
+                    item {
+                        ItemsCard(
+                            detail = detail,
+                            onReview = { item -> reviewItem = item },
+                        )
+                    }
                     item { AmountCard(detail) }
+                    if (detail.invoiceRequired) {
+                        item { InvoiceCard(detail) }
+                    }
+                    if (detail.afterSaleNo != null) {
+                        item {
+                            AfterSaleEntry(
+                                label = "售后 ${afterSaleStatusText(detail.afterSaleStatus)}",
+                                action = "查看售后",
+                                onClick = {
+                                    detail.afterSaleNo?.let { navController.navigate(Routes.afterSaleDetail(it)) }
+                                },
+                            )
+                        }
+                    } else if (canApplyAfterSale(detail)) {
+                        item {
+                            AfterSaleEntry(
+                                label = "需要退款或退货？",
+                                action = "申请售后",
+                                onClick = { navController.navigate(Routes.afterSaleApply(detail.orderNo)) },
+                            )
+                        }
+                    }
                     if (!detail.logisticsNo.isNullOrBlank()) {
                         item { LogisticsCard(detail) }
                     }
@@ -175,6 +221,99 @@ fun OrderDetailScreen(
             },
         )
     }
+
+    if (addressDialog) {
+        val list = addresses.data.orEmpty()
+        AlertDialog(
+            onDismissRequest = { addressDialog = false },
+            title = { Text("修改收货地址") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (list.isEmpty()) {
+                        Text("暂无地址，请先在个人中心添加。", color = Muted)
+                    }
+                    list.forEach { address ->
+                        Surface(
+                            color = SurfaceSoft,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    addressDialog = false
+                                    viewModel.changeOrderAddress(orderNo, address.id)
+                                },
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("${address.receiverName}  ${address.phone}", color = Ink)
+                                Text(
+                                    "${address.province}${address.city}${address.district}${address.detail}",
+                                    color = Muted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { addressDialog = false }) { Text("关闭", color = Muted) }
+            },
+        )
+    }
+
+    reviewItem?.let { item ->
+        AlertDialog(
+            onDismissRequest = { reviewItem = null },
+            title = { Text("评价商品") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(item.productName, color = Ink)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        (1..5).forEach { star ->
+                            Text(
+                                "★",
+                                color = if (star <= reviewRating) Color(0xFFF59E0B) else Line,
+                                fontSize = 28.sp,
+                                modifier = Modifier.clickable { reviewRating = star },
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = reviewContent,
+                        onValueChange = { reviewContent = it },
+                        placeholder = { Text("说说使用感受（选填）", color = Faint) },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = SurfaceSoft,
+                            unfocusedContainerColor = SurfaceSoft,
+                            focusedBorderColor = Terracotta,
+                            unfocusedBorderColor = Line,
+                        ),
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("匿名评价", color = Muted)
+                        Spacer(Modifier.weight(1f))
+                        Switch(checked = reviewAnonymous, onCheckedChange = { reviewAnonymous = it })
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val id = item.orderItemId ?: return@TextButton
+                        viewModel.submitReview(orderNo, id, reviewRating, reviewContent, reviewAnonymous) {
+                            reviewItem = null
+                            reviewContent = ""
+                            reviewRating = 5
+                            reviewAnonymous = false
+                        }
+                    },
+                ) { Text("提交", color = Terracotta) }
+            },
+            dismissButton = { TextButton(onClick = { reviewItem = null }) { Text("取消", color = Muted) } },
+        )
+    }
 }
 
 @Composable
@@ -202,7 +341,12 @@ private fun StatusHero(detail: OrderDetail) {
                 )
                 Spacer(Modifier.weight(1f))
                 Text(
-                    text = "支付 ${if (detail.paymentStatus == "PAID") "已支付" else "未支付"}",
+                    text = when (detail.paymentStatus) {
+                        "PAID" -> "已支付"
+                        "PARTIALLY_REFUNDED" -> "部分退款"
+                        "REFUNDED" -> "已退款"
+                        else -> "未支付"
+                    },
                     color = Color.White.copy(alpha = 0.75f),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -223,17 +367,21 @@ private fun StatusHero(detail: OrderDetail) {
     }
 }
 
-private fun statusNote(detail: OrderDetail): String = when (detail.status) {
+private fun statusNote(detail: OrderDetail): String {
+    if (detail.paymentStatus == "REFUNDED") return "订单已退款，可在售后记录中查看。"
+    if (detail.paymentStatus == "PARTIALLY_REFUNDED") return "订单已部分退款，剩余商品按原流程履约。"
+    return when (detail.status) {
     "PENDING_PAYMENT" -> "订单待付款，可在下方完成模拟支付。"
     "PENDING_SHIPMENT" -> "商家正在备货，请耐心等待发货。"
     "PENDING_RECEIPT" -> "商品已发出，请注意查收。"
     "COMPLETED" -> "订单已完成，感谢你的购买。"
     "CANCELLED" -> detail.cancelReason?.let { "订单已取消：$it" } ?: "订单已取消。"
     else -> ""
+    }
 }
 
 @Composable
-private fun AddressCard(detail: OrderDetail) {
+private fun AddressCard(detail: OrderDetail, onChange: () -> Unit) {
     Surface(
         color = SurfaceWarm,
         shape = RoundedCornerShape(18.dp),
@@ -252,12 +400,17 @@ private fun AddressCard(detail: OrderDetail) {
                 color = Muted,
                 style = MaterialTheme.typography.bodySmall,
             )
+            if (detail.status == "PENDING_SHIPMENT" && detail.paymentStatus == "PAID") {
+                TextButton(onClick = onChange, modifier = Modifier.align(Alignment.End)) {
+                    Text("修改收货地址", color = Terracotta, fontSize = 12.sp)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun ItemsCard(detail: OrderDetail) {
+private fun ItemsCard(detail: OrderDetail, onReview: (OrderItem) -> Unit) {
     Surface(
         color = SurfaceWarm,
         shape = RoundedCornerShape(18.dp),
@@ -300,15 +453,64 @@ private fun ItemsCard(detail: OrderDetail) {
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
-                    Text(
-                        text = "¥%.2f".format(item.subtotal),
-                        color = Ink,
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "¥%.2f".format(item.subtotal),
+                            color = Ink,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        if (detail.status == "COMPLETED" && item.orderItemId != null) {
+                            TextButton(onClick = { onReview(item) }) {
+                                Text("评价", color = Terracotta, fontSize = 12.sp)
+                            }
+                        }
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun InvoiceCard(detail: OrderDetail) {
+    Surface(color = SurfaceWarm, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text("发票信息", color = Ink, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            Text("抬头：${detail.invoiceTitle}", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text("税号：${detail.invoiceTaxNo.ifBlank { "个人/无" }}", color = Muted, style = MaterialTheme.typography.bodySmall)
+            Text("邮箱：${detail.invoiceEmail}", color = Muted, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+private fun AfterSaleEntry(label: String, action: String, onClick: () -> Unit) {
+    Surface(color = SurfaceWarm, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = Muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onClick) { Text(action, color = Terracotta) }
+        }
+    }
+}
+
+private fun canApplyAfterSale(detail: OrderDetail): Boolean =
+    detail.afterSaleNo == null &&
+        detail.paymentStatus == "PAID" &&
+        detail.status in listOf("PENDING_SHIPMENT", "PENDING_RECEIPT", "COMPLETED")
+
+private fun afterSaleStatusText(status: String?): String = when (status) {
+    "APPLIED" -> "待审核"
+    "APPROVED" -> "待退款"
+    "WAIT_RETURN" -> "待退货"
+    "RETURNED" -> "退货运输中"
+    "RETURN_RECEIVED" -> "已收到退货"
+    "REFUNDING" -> "退款中"
+    "REFUNDED" -> "已退款"
+    "REFUND_FAILED" -> "退款失败"
+    "REJECTED" -> "已拒绝"
+    "CANCELLED" -> "已取消"
+    else -> "处理中"
 }
 
 @Composable

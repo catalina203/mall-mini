@@ -25,7 +25,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.mallmini.android.data.Address
 import com.mallmini.android.data.CheckoutPreview
+import com.mallmini.android.data.UserCoupon
 import com.mallmini.android.ui.MallViewModel
 import com.mallmini.android.ui.Routes
 import com.mallmini.android.ui.components.ErrorContent
@@ -75,11 +79,18 @@ fun CheckoutScreen(
 ) {
     val addressesState by viewModel.addresses.collectAsStateWithLifecycle()
     val checkoutState by viewModel.checkout.collectAsStateWithLifecycle()
+    val myCoupons by viewModel.myCoupons.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
     val loggedIn by viewModel.loggedIn.collectAsStateWithLifecycle()
 
     var selectedAddressId by rememberSaveable { mutableLongStateOf(0L) }
     var addressPickerVisible by remember { mutableStateOf(false) }
+    var couponPickerVisible by remember { mutableStateOf(false) }
+    var selectedCouponId by rememberSaveable { mutableLongStateOf(0L) }
+    var invoiceRequired by rememberSaveable { mutableStateOf(false) }
+    var invoiceTitle by rememberSaveable { mutableStateOf("") }
+    var invoiceTaxNo by rememberSaveable { mutableStateOf("") }
+    var invoiceEmail by rememberSaveable { mutableStateOf("") }
     val clientRequestNo = rememberSaveable(source, cartItemIds, skuId, quantity) {
         UUID.randomUUID().toString()
     }
@@ -87,6 +98,7 @@ fun CheckoutScreen(
 
     LaunchedEffect(Unit) {
         viewModel.loadAddresses()
+        viewModel.loadCoupons()
     }
 
     LaunchedEffect(addressesState.data) {
@@ -95,7 +107,7 @@ fun CheckoutScreen(
         }
     }
 
-    LaunchedEffect(selectedAddressId, source, cartItemIds, skuId, quantity) {
+    LaunchedEffect(selectedAddressId, source, cartItemIds, skuId, quantity, selectedCouponId) {
         if (selectedAddressId > 0) {
             viewModel.previewCheckout(
                 addressId = selectedAddressId,
@@ -103,6 +115,7 @@ fun CheckoutScreen(
                 cartItemIds = cartItemIds,
                 skuId = skuId,
                 quantity = quantity,
+                couponId = selectedCouponId.takeIf { it > 0 },
             )
         }
     }
@@ -176,6 +189,24 @@ fun CheckoutScreen(
                         )
                     }
                     item {
+                        CheckoutCouponRow(
+                            couponName = preview.couponName,
+                            onClick = { couponPickerVisible = true },
+                        )
+                    }
+                    item {
+                        CheckoutInvoice(
+                            required = invoiceRequired,
+                            title = invoiceTitle,
+                            taxNo = invoiceTaxNo,
+                            email = invoiceEmail,
+                            onRequiredChange = { invoiceRequired = it },
+                            onTitleChange = { invoiceTitle = it },
+                            onTaxNoChange = { invoiceTaxNo = it },
+                            onEmailChange = { invoiceEmail = it },
+                        )
+                    }
+                    item {
                         CheckoutItems(preview)
                     }
                     item {
@@ -217,6 +248,11 @@ fun CheckoutScreen(
                                     skuId = skuId,
                                     quantity = quantity,
                                     clientRequestNo = clientRequestNo,
+                                    couponId = selectedCouponId.takeIf { it > 0 },
+                                    invoiceRequired = invoiceRequired,
+                                    invoiceTitle = invoiceTitle,
+                                    invoiceTaxNo = invoiceTaxNo,
+                                    invoiceEmail = invoiceEmail,
                                 ) { order ->
                                     navController.navigate(Routes.orderDetail(order.orderNo)) {
                                         popUpTo(Routes.HOME)
@@ -239,6 +275,37 @@ fun CheckoutScreen(
         }
     }
 
+    if (couponPickerVisible) {
+        val usable = myCoupons.data.orEmpty().filter { it.status == "UNUSED" }
+        AlertDialog(
+            onDismissRequest = { couponPickerVisible = false },
+            title = { Text("选择优惠券") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CouponChoice("不使用优惠券", selectedCouponId == 0L) {
+                        selectedCouponId = 0L
+                        couponPickerVisible = false
+                    }
+                    usable.forEach { coupon ->
+                        CouponChoice(
+                            "${coupon.name}  ${couponValue(coupon)}",
+                            selectedCouponId == coupon.id,
+                        ) {
+                            selectedCouponId = coupon.id
+                            couponPickerVisible = false
+                        }
+                    }
+                    if (usable.isEmpty()) {
+                        Text("暂无可使用优惠券", color = Muted, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { couponPickerVisible = false }) { Text("关闭", color = Terracotta) }
+            },
+        )
+    }
+
     if (addressPickerVisible) {
         AddressPickerDialog(
             addresses = addresses,
@@ -253,6 +320,115 @@ fun CheckoutScreen(
                 navController.navigate(Routes.addressEdit(null))
             },
         )
+    }
+}
+
+private fun couponValue(coupon: UserCoupon): String =
+    if (coupon.type == "FIXED") "减 ¥%.0f".format(coupon.value) else "减 %.0f%%".format(coupon.value)
+
+@Composable
+private fun CouponChoice(text: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        color = if (selected) TerracottaSoft else SurfaceSoft,
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Text(
+            text,
+            color = if (selected) TerracottaDark else Ink,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(12.dp),
+        )
+    }
+}
+
+@Composable
+private fun CheckoutCouponRow(couponName: String, onClick: () -> Unit) {
+    Surface(
+        color = SurfaceWarm,
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("优惠券", color = Ink, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.weight(1f))
+            Text(
+                if (couponName.isBlank()) "选择优惠券" else couponName,
+                color = if (couponName.isBlank()) Muted else TerracottaDark,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(" ›", color = Faint)
+        }
+    }
+}
+
+@Composable
+private fun CheckoutInvoice(
+    required: Boolean,
+    title: String,
+    taxNo: String,
+    email: String,
+    onRequiredChange: (Boolean) -> Unit,
+    onTitleChange: (String) -> Unit,
+    onTaxNoChange: (String) -> Unit,
+    onEmailChange: (String) -> Unit,
+) {
+    Surface(color = SurfaceWarm, shape = RoundedCornerShape(18.dp), modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("发票", color = Ink, style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.weight(1f))
+                Text(if (required) "需要" else "不需要", color = Muted, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.width(6.dp))
+                Switch(checked = required, onCheckedChange = onRequiredChange)
+            }
+            Text("当前仅记录开票信息，电子发票开具需后续接入。", color = Faint, style = MaterialTheme.typography.bodySmall)
+            if (required) {
+                OutlinedTextField(
+                    title,
+                    onTitleChange,
+                    label = { Text("发票抬头") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceSoft,
+                        unfocusedContainerColor = SurfaceSoft,
+                        focusedBorderColor = Terracotta,
+                        unfocusedBorderColor = Line,
+                    ),
+                )
+                OutlinedTextField(
+                    taxNo,
+                    onTaxNoChange,
+                    label = { Text("税号（个人可不填）") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceSoft,
+                        unfocusedContainerColor = SurfaceSoft,
+                        focusedBorderColor = Terracotta,
+                        unfocusedBorderColor = Line,
+                    ),
+                )
+                OutlinedTextField(
+                    email,
+                    onEmailChange,
+                    label = { Text("接收邮箱") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = SurfaceSoft,
+                        unfocusedContainerColor = SurfaceSoft,
+                        focusedBorderColor = Terracotta,
+                        unfocusedBorderColor = Line,
+                    ),
+                )
+            }
+        }
     }
 }
 

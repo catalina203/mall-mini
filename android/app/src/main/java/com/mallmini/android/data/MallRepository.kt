@@ -57,8 +57,18 @@ class MallRepository(private val prefs: Preferences) {
 
     suspend fun categories(): Result<List<Category>> = call { api.categories() }
 
-    suspend fun products(categoryId: Long? = null, keyword: String? = null): Result<PageResult<ProductSummary>> =
-        call { api.products(categoryId = categoryId, keyword = keyword?.takeIf { it.isNotBlank() }) }
+    suspend fun products(
+        categoryId: Long? = null,
+        keyword: String? = null,
+        sort: String? = null,
+    ): Result<PageResult<ProductSummary>> =
+        call {
+            api.products(
+                categoryId = categoryId,
+                keyword = keyword?.takeIf { it.isNotBlank() },
+                sort = sort,
+            )
+        }
 
     suspend fun product(id: Long): Result<ProductDetail> = call { api.product(id) }
 
@@ -109,6 +119,75 @@ class MallRepository(private val prefs: Preferences) {
     suspend fun payOrder(orderNo: String): Result<PaymentResult> = call { api.payOrder(orderNo) }
 
     suspend fun paymentConfig(): Result<PaymentConfig> = call { api.paymentConfig() }
+
+    suspend fun hotKeywords(): Result<List<String>> = call { api.hotKeywords() }
+
+    suspend fun changeOrderAddress(orderNo: String, addressId: Long): Result<OrderDetail> =
+        call { api.changeOrderAddress(orderNo, ChangeAddressRequest(addressId)) }
+
+    suspend fun afterSales(status: String? = null): Result<PageResult<AfterSaleSummary>> =
+        call { api.afterSales(status = status?.takeIf { it.isNotBlank() }) }
+
+    suspend fun afterSale(afterSaleNo: String): Result<AfterSaleDetail> =
+        call { api.afterSale(afterSaleNo) }
+
+    suspend fun createAfterSale(orderNo: String, request: CreateAfterSaleRequest): Result<AfterSaleDetail> =
+        call { api.createAfterSale(orderNo, request) }
+
+    suspend fun cancelAfterSale(afterSaleNo: String): Result<AfterSaleDetail> =
+        call { api.cancelAfterSale(afterSaleNo) }
+
+    suspend fun submitReturnShipment(
+        afterSaleNo: String,
+        company: String,
+        trackingNo: String,
+    ): Result<AfterSaleDetail> =
+        call { api.submitReturnShipment(afterSaleNo, ReturnShipmentRequest(company, trackingNo)) }
+
+    suspend fun myCoupons(status: String? = null): Result<List<UserCoupon>> =
+        call { api.myCoupons(status = status?.takeIf { it.isNotBlank() }) }
+
+    suspend fun claimableCoupons(): Result<List<CouponTemplate>> = call { api.claimableCoupons() }
+
+    suspend fun claimCoupon(templateId: Long): Result<UserCoupon> = call { api.claimCoupon(templateId) }
+
+    suspend fun member(): Result<MemberInfo> = call { api.member() }
+
+    suspend fun pointsLogs(): Result<PageResult<PointsLog>> = call { api.pointsLogs() }
+
+    suspend fun productReviews(productId: Long): Result<PageResult<Review>> =
+        call { api.productReviews(productId) }
+
+    suspend fun reviewSummary(productId: Long): Result<ReviewSummary> =
+        call { api.reviewSummary(productId) }
+
+    suspend fun createReview(orderNo: String, request: CreateReviewRequest): Result<Review> =
+        call { api.createReview(orderNo, request) }
+
+    suspend fun favorites(): Result<PageResult<FavoriteProduct>> = call { api.favorites() }
+
+    suspend fun favoriteStatus(productId: Long): Result<Boolean> = call { api.favoriteStatus(productId) }
+
+    suspend fun addFavorite(productId: Long): Result<Unit> = action { api.addFavorite(productId) }
+
+    suspend fun removeFavorite(productId: Long): Result<Unit> = action { api.removeFavorite(productId) }
+
+    suspend fun history(): Result<PageResult<FavoriteProduct>> = call { api.history() }
+
+    suspend fun recordHistory(productId: Long): Result<Unit> = action { api.recordHistory(productId) }
+
+    suspend fun clearHistory(): Result<Unit> = action { api.clearHistory() }
+
+    suspend fun supportTickets(): Result<PageResult<SupportTicket>> = call { api.supportTickets() }
+
+    suspend fun createTicket(request: CreateTicketRequest): Result<SupportTicket> =
+        call { api.createTicket(request) }
+
+    suspend fun closeTicket(ticketNo: String): Result<Unit> = action { api.closeTicket(ticketNo) }
+
+    suspend fun notifications(): Result<PageResult<UserNotification>> = call { api.notifications() }
+
+    suspend fun markNotificationRead(id: Long): Result<Unit> = action { api.markNotificationRead(id) }
 
     private fun buildApi(baseUrl: String): ApiService {
         val normalized = if (baseUrl.endsWith("/")) baseUrl else "$baseUrl/"

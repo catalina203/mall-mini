@@ -34,11 +34,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.mallmini.android.ui.screens.AfterSaleApplyScreen
+import com.mallmini.android.ui.screens.AfterSaleDetailScreen
+import com.mallmini.android.ui.screens.AfterSalesScreen
 import com.mallmini.android.ui.screens.AddressEditScreen
 import com.mallmini.android.ui.screens.AddressListScreen
 import com.mallmini.android.ui.screens.CartScreen
 import com.mallmini.android.ui.screens.CatalogScreen
 import com.mallmini.android.ui.screens.CheckoutScreen
+import com.mallmini.android.ui.screens.CouponsScreen
+import com.mallmini.android.ui.screens.FavoritesScreen
+import com.mallmini.android.ui.screens.MemberScreen
+import com.mallmini.android.ui.screens.NotificationsScreen
+import com.mallmini.android.ui.screens.ProductReviewsScreen
+import com.mallmini.android.ui.screens.SupportScreen
 import com.mallmini.android.ui.screens.HomeScreen
 import com.mallmini.android.ui.screens.OrderDetailScreen
 import com.mallmini.android.ui.screens.OrdersScreen
@@ -64,9 +73,21 @@ object Routes {
     const val ADDRESS_EDIT = "addressEdit?addressId={addressId}"
     const val CHECKOUT = "checkout?source={source}&cartItemIds={cartItemIds}&skuId={skuId}&quantity={quantity}"
     const val ORDER_DETAIL = "orderDetail/{orderNo}"
+    const val AFTER_SALES = "afterSales"
+    const val AFTER_SALE_APPLY = "afterSaleApply/{orderNo}"
+    const val AFTER_SALE_DETAIL = "afterSaleDetail/{afterSaleNo}"
+    const val COUPONS = "coupons"
+    const val MEMBER = "member"
+    const val SUPPORT = "support"
+    const val SAVED = "saved"
+    const val PRODUCT_REVIEWS = "productReviews/{productId}"
+    const val NOTIFICATIONS = "notifications"
 
     fun product(id: Long) = "product/$id"
     fun orderDetail(orderNo: String) = "orderDetail/$orderNo"
+    fun afterSaleDetail(afterSaleNo: String) = "afterSaleDetail/$afterSaleNo"
+    fun afterSaleApply(orderNo: String) = "afterSaleApply/$orderNo"
+    fun productReviews(productId: Long) = "productReviews/$productId"
     fun addressEdit(id: Long?) = "addressEdit?addressId=${id ?: 0L}"
     fun checkout(source: String, cartItemIds: List<Long>, skuId: Long?, quantity: Int?): String {
         val ids = cartItemIds.joinToString(",")
@@ -187,6 +208,44 @@ fun MallApp(viewModel: MallViewModel = viewModel()) {
                 }
                 composable(Routes.ORDERS) {
                     OrdersScreen(navController, viewModel)
+                }
+                composable(Routes.AFTER_SALES) {
+                    AfterSalesScreen(navController, viewModel)
+                }
+                composable(
+                    Routes.AFTER_SALE_APPLY,
+                    arguments = listOf(navArgument("orderNo") { type = NavType.StringType }),
+                ) { entry ->
+                    AfterSaleApplyScreen(
+                        navController,
+                        viewModel,
+                        entry.arguments?.getString("orderNo").orEmpty(),
+                    )
+                }
+                composable(
+                    Routes.AFTER_SALE_DETAIL,
+                    arguments = listOf(navArgument("afterSaleNo") { type = NavType.StringType }),
+                ) { entry ->
+                    AfterSaleDetailScreen(
+                        navController,
+                        viewModel,
+                        entry.arguments?.getString("afterSaleNo").orEmpty(),
+                    )
+                }
+                composable(Routes.COUPONS) { CouponsScreen(navController, viewModel) }
+                composable(Routes.MEMBER) { MemberScreen(navController, viewModel) }
+                composable(Routes.SUPPORT) { SupportScreen(navController, viewModel) }
+                composable(Routes.SAVED) { FavoritesScreen(navController, viewModel) }
+                composable(Routes.NOTIFICATIONS) { NotificationsScreen(navController, viewModel) }
+                composable(
+                    Routes.PRODUCT_REVIEWS,
+                    arguments = listOf(navArgument("productId") { type = NavType.LongType }),
+                ) { entry ->
+                    ProductReviewsScreen(
+                        navController,
+                        viewModel,
+                        entry.arguments?.getLong("productId") ?: 0L,
+                    )
                 }
                 composable(
                     Routes.ORDER_DETAIL,

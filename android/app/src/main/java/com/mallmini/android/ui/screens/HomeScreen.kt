@@ -119,6 +119,20 @@ fun HomeScreen(navController: NavController, viewModel: MallViewModel) {
                     SearchEntry(onClick = { navController.navigate(Routes.SEARCH) })
                 }
 
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeShortcut("领券中心", "满减 / 折扣", Modifier.weight(1f)) {
+                            navController.navigate(Routes.COUPONS)
+                        }
+                        HomeShortcut("联系客服", "工单 / 售后", Modifier.weight(1f)) {
+                            navController.navigate(Routes.SUPPORT)
+                        }
+                        HomeShortcut("会员积分", "积分 / 等级", Modifier.weight(1f)) {
+                            navController.navigate(Routes.MEMBER)
+                        }
+                    }
+                }
+
                 if (data.banners.isNotEmpty()) {
                     item {
                         BannerPager(data.banners.map { it.imageUrl }) { index ->
@@ -139,6 +153,22 @@ fun HomeScreen(navController: NavController, viewModel: MallViewModel) {
                         CategoryRow(data.categories) {
                             navController.navigate(Routes.CATALOG)
                         }
+                    }
+                }
+
+                if (data.hotProducts.isNotEmpty()) {
+                    item {
+                        SectionHeader(title = "热销榜单", subtitle = "按支付销量")
+                        Spacer(Modifier.height(12.dp))
+                        ProductGrid(data.hotProducts) { id -> navController.navigate(Routes.product(id)) }
+                    }
+                }
+
+                if (data.newProducts.isNotEmpty()) {
+                    item {
+                        SectionHeader(title = "新品上架", subtitle = "最近上架")
+                        Spacer(Modifier.height(12.dp))
+                        ProductGrid(data.newProducts) { id -> navController.navigate(Routes.product(id)) }
                     }
                 }
 
@@ -167,6 +197,25 @@ fun HomeScreen(navController: NavController, viewModel: MallViewModel) {
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun HomeShortcut(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        color = SurfaceWarm,
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.clickable(onClick = onClick),
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp)) {
+            Text(title, color = Ink, style = MaterialTheme.typography.titleMedium)
+            Text(subtitle, color = Faint, style = MaterialTheme.typography.bodySmall)
         }
     }
 }

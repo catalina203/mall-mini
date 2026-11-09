@@ -58,6 +58,7 @@ import com.mallmini.android.ui.theme.TerracottaSoft
 @Composable
 fun SearchScreen(navController: NavController, viewModel: MallViewModel) {
     val products by viewModel.products.collectAsStateWithLifecycle()
+    val hotKeywords by viewModel.hotKeywords.collectAsStateWithLifecycle()
     val keyboard = LocalSoftwareKeyboardController.current
     var keyword by rememberSaveable { mutableStateOf("") }
     var searched by rememberSaveable { mutableStateOf(false) }
@@ -111,8 +112,9 @@ fun SearchScreen(navController: NavController, viewModel: MallViewModel) {
             )
 
             Spacer(Modifier.height(12.dp))
+            val suggestions = hotKeywords.ifEmpty { listOf("耳机", "咖啡", "T恤") }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("耳机", "咖啡", "T恤").forEach { suggestion ->
+                suggestions.take(5).forEach { suggestion ->
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(999.dp))

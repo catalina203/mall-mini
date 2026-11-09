@@ -21,11 +21,17 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.AssignmentReturn
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Logout
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SupportAgent
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -105,11 +111,52 @@ fun ProfileScreen(navController: NavController, viewModel: MallViewModel) {
                     phone = user?.phone.orEmpty(),
                     onLogout = { logoutDialog = true },
                 )
+                MemberBar(
+                    points = user?.points ?: 0,
+                    level = user?.memberLevelLabel.orEmpty().ifBlank { "普通会员" },
+                    onClick = { navController.navigate(Routes.MEMBER) },
+                )
                 QuickActions(
                     onOrders = { navController.navigate(Routes.ORDERS) },
                     onAddresses = { navController.navigate(Routes.ADDRESSES) },
                 )
                 MenuCard {
+                    MenuRow(
+                        icon = Icons.Outlined.AssignmentReturn,
+                        title = "售后服务",
+                        subtitle = "退款 / 退货 / 售后记录",
+                        onClick = { navController.navigate(Routes.AFTER_SALES) },
+                    )
+                    MenuRow(
+                        icon = Icons.Outlined.LocalOffer,
+                        title = "我的优惠券",
+                        subtitle = "领券 / 查看",
+                        onClick = { navController.navigate(Routes.COUPONS) },
+                    )
+                    MenuRow(
+                        icon = Icons.Outlined.FavoriteBorder,
+                        title = "收藏与足迹",
+                        subtitle = "收藏商品 / 浏览记录",
+                        onClick = { navController.navigate(Routes.SAVED) },
+                    )
+                    MenuRow(
+                        icon = Icons.Outlined.WorkspacePremium,
+                        title = "会员积分",
+                        subtitle = "等级 / 积分明细",
+                        onClick = { navController.navigate(Routes.MEMBER) },
+                    )
+                    MenuRow(
+                        icon = Icons.Outlined.SupportAgent,
+                        title = "联系客服",
+                        subtitle = "提交工单",
+                        onClick = { navController.navigate(Routes.SUPPORT) },
+                    )
+                    MenuRow(
+                        icon = Icons.Outlined.Notifications,
+                        title = "消息通知",
+                        subtitle = "支付 / 发货 / 售后进度",
+                        onClick = { navController.navigate(Routes.NOTIFICATIONS) },
+                    )
                     MenuRow(
                         icon = Icons.Outlined.Settings,
                         title = "服务器设置",
@@ -363,6 +410,28 @@ private fun GuestHero() {
                 color = Color.White.copy(alpha = 0.55f),
                 style = MaterialTheme.typography.bodySmall,
             )
+        }
+    }
+}
+
+@Composable
+private fun MemberBar(points: Int, level: String, onClick: () -> Unit) {
+    Surface(
+        color = Color(0xFF2B211A),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(level, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text("$points 积分", color = Color(0xFFF4A284), fontSize = 22.sp)
+            }
+            Text("查看明细 ›", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
         }
     }
 }
